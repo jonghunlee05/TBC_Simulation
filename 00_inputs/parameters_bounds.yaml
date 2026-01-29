@@ -1,0 +1,12 @@
+bounds:
+  YSZ_thickness_um: [100, 400]
+  bondcoat_thickness_um: [80, 250]
+  initial_TGO_thickness_um: [0.2, 5.0]
+  T_peak_C: [800, 1100]
+  deltaT_C: [600, 1100]
+  k_p: [1.0e-14, 1.0e-11]      # parabolic growth constant (placeholder)
+  roughness_amplitude_um: [0.0, 10.0]
+  roughness_wavelength_um: [50, 500]
+sampling:
+  method: latin_hypercube
+  n_samples: 50

@@ -1,0 +1,8 @@
+thermal_cycle:
+  T_room_C: 25
+  T_peak_C: 900
+  heating_time_s: 600
+  hold_time_s: 600
+  cooling_time_s: 600
+  n_cycles: 10
+  output_per_cycle: 20
