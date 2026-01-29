@@ -1,0 +1,9 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Generated meshes/outputs
+02_mesh/*.mesh
+05_outputs/
+*.vtk
