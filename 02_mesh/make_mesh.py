@@ -12,8 +12,8 @@ def main():
 
     height = ysz + tgo + bond + sub
 
-    # Coarse for now. We refine later.
-    nx, ny = 200, 150
+    # Refined in y to resolve thin TGO (~1 um).
+    nx, ny = 200, 1500
 
     xs = np.linspace(0.0, width, nx + 1)
     ys = np.linspace(0.0, height, ny + 1)

@@ -7,3 +7,4 @@ __pycache__/
 02_mesh/*.mesh
 05_outputs/
 *.vtk
+sanity_check/

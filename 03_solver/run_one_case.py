@@ -1,6 +1,10 @@
+import os
+import sys
+
 import numpy as np
 import yaml  # (we won't use yet, placeholder)
 from sfepy.discrete.fem import Mesh, FEDomain, Field
+from sfepy.base.base import Struct
 from sfepy.discrete import (
     FieldVariable,
     Material,
@@ -14,10 +18,14 @@ from sfepy.discrete.conditions import Conditions, EssentialBC
 from sfepy.solvers.ls import ScipyDirect
 from sfepy.solvers.nls import Newton
 
+
+sys.path.append(os.path.dirname(__file__))
 from regions import layer_limits
 
 
 def main():
+    os.makedirs("05_outputs/fields", exist_ok=True)
+
     mesh = Mesh.from_file("02_mesh/tbc_2d.mesh")
     domain = FEDomain("domain", mesh)
 
@@ -25,10 +33,12 @@ def main():
 
     y0, y1, y2, y3, y4 = layer_limits()
 
-    def cells_in_y(min_y, max_y):
+    def cells_in_y(min_y, max_y, include_top=False):
         def _selector(coors, domain=None):
             ys = coors[:, 1]
-            return np.where((ys >= min_y) & (ys <= max_y))[0]
+            if include_top:
+                return np.where((ys >= min_y) & (ys <= max_y))[0]
+            return np.where((ys >= min_y) & (ys < max_y))[0]
 
         return _selector
 
@@ -36,7 +46,7 @@ def main():
         "cells_substrate": cells_in_y(y0, y1),
         "cells_bondcoat": cells_in_y(y1, y2),
         "cells_tgo": cells_in_y(y2, y3),
-        "cells_ysz": cells_in_y(y3, y4),
+        "cells_ysz": cells_in_y(y3, y4, include_top=True),
     }
 
     substrate = domain.create_region(
@@ -180,7 +190,24 @@ def main():
     state = pb.solve()
 
     out = state.create_output()
-    pb.save_state("05_outputs/fields/u_snapshot.vtk", state)
+
+    # Add a cell-wise layer id so ParaView can visualize the regions.
+    n_cells = mesh.n_el
+    layer_id = np.full(n_cells, -1, dtype=np.int32)
+    layer_id[substrate.cells] = 0
+    layer_id[bondcoat.cells] = 1
+    if tgo.cells.shape[0] > 0:
+        layer_id[tgo.cells] = 2
+    layer_id[ysz.cells] = 3
+
+    out["layer_id"] = Struct(
+        name="layer_id",
+        mode="cell",
+        data=layer_id.astype(np.float64)[:, None, None, None],
+        var_name="layer_id",
+    )
+
+    pb.save_state("05_outputs/fields/u_snapshot.vtk", state, out=out)
 
     print("Saved: 05_outputs/fields/u_snapshot.vtk")
 
