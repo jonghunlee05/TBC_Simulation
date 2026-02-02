@@ -21,6 +21,7 @@ from sfepy.solvers.nls import Newton
 
 sys.path.append(os.path.dirname(__file__))
 from regions import layer_limits
+from extract_features import extract_features
 
 
 def main():
@@ -200,14 +201,34 @@ def main():
         layer_id[tgo.cells] = 2
     layer_id[ysz.cells] = 3
 
+    layer_id_simple = layer_id.astype(np.float64)[:, None]
     out["layer_id"] = Struct(
         name="layer_id",
         mode="cell",
-        data=layer_id.astype(np.float64)[:, None, None, None],
+        data=layer_id_simple[:, None, :, None],
         var_name="layer_id",
     )
 
     pb.save_state("05_outputs/fields/u_snapshot.vtk", state, out=out)
+
+    extract_features(
+        pb,
+        regions={
+            "substrate": substrate,
+            "bondcoat": bondcoat,
+            "tgo": tgo,
+            "ysz": ysz,
+        },
+        materials={
+            "substrate": {"lam": lam_sub, "mu": mu_sub},
+            "bondcoat": {"lam": lam_bond, "mu": mu_bond},
+            "tgo": {"lam": lam_tgo, "mu": mu_tgo},
+            "ysz": {"lam": lam_ysz, "mu": mu_ysz},
+        },
+        y2=y2,
+        y3=y3,
+        output_csv="05_outputs/features/features_baseline.csv",
+    )
 
     print("Saved: 05_outputs/fields/u_snapshot.vtk")
 
