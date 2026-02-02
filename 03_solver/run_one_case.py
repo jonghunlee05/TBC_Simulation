@@ -9,7 +9,7 @@ from sfepy.discrete import (
     Equations,
     Problem,
 )
-from sfepy.terms import Term
+from sfepy.terms import Term, Terms
 from sfepy.discrete.conditions import Conditions, EssentialBC
 from sfepy.solvers.ls import ScipyDirect
 from sfepy.solvers.nls import Newton
@@ -23,6 +23,35 @@ def main():
 
     omega = domain.create_region("Omega", "all")
 
+    y0, y1, y2, y3, y4 = layer_limits()
+
+    def cells_in_y(min_y, max_y):
+        def _selector(coors, domain=None):
+            ys = coors[:, 1]
+            return np.where((ys >= min_y) & (ys <= max_y))[0]
+
+        return _selector
+
+    region_functions = {
+        "cells_substrate": cells_in_y(y0, y1),
+        "cells_bondcoat": cells_in_y(y1, y2),
+        "cells_tgo": cells_in_y(y2, y3),
+        "cells_ysz": cells_in_y(y3, y4),
+    }
+
+    substrate = domain.create_region(
+        "Substrate", "cells by cells_substrate", "cell", functions=region_functions
+    )
+    bondcoat = domain.create_region(
+        "Bondcoat", "cells by cells_bondcoat", "cell", functions=region_functions
+    )
+    tgo = domain.create_region(
+        "TGO", "cells by cells_tgo", "cell", functions=region_functions, allow_empty=True
+    )
+    ysz = domain.create_region(
+        "YSZ", "cells by cells_ysz", "cell", functions=region_functions
+    )
+
     # Boundaries
     left = domain.create_region("Left", "vertices in x < 1e-6", "facet")
     right = domain.create_region("Right", "vertices in x > 1999.999", "facet")
@@ -34,31 +63,107 @@ def main():
     u = FieldVariable("u", "unknown", field)
     v = FieldVariable("v", "test", field, primary_var_name="u")
 
-    # ---- Materials (placeholders, same for whole domain for FIRST run) ----
-    E = 200e9
-    nu = 0.30
-    alpha = 12e-6
+    # ---- Materials (placeholders, per-layer for this run) ----
+    def lame_from_E_nu(E, nu):
+        lam = E * nu / ((1 + nu) * (1 - 2 * nu))
+        mu = E / (2 * (1 + nu))
+        return lam, mu
 
-    # Plane strain stiffness (using sfepy isotropic convenience through lame)
-    lam = E * nu / ((1 + nu) * (1 - 2 * nu))
-    mu = E / (2 * (1 + nu))
+    lam_sub, mu_sub = lame_from_E_nu(200e9, 0.30)
+    alpha_sub = 13e-6
+    m_sub = Material("m_sub", lam=lam_sub, mu=mu_sub, alpha=alpha_sub)
 
-    m = Material("m", lam=lam, mu=mu, alpha=alpha)
+    lam_bond, mu_bond = lame_from_E_nu(180e9, 0.30)
+    alpha_bond = 14e-6
+    m_bond = Material("m_bond", lam=lam_bond, mu=mu_bond, alpha=alpha_bond)
+
+    lam_tgo, mu_tgo = lame_from_E_nu(350e9, 0.25)
+    alpha_tgo = 8e-6
+    m_tgo = Material("m_tgo", lam=lam_tgo, mu=mu_tgo, alpha=alpha_tgo)
+
+    lam_ysz, mu_ysz = lame_from_E_nu(200e9, 0.23)
+    alpha_ysz = 10e-6
+    m_ysz = Material("m_ysz", lam=lam_ysz, mu=mu_ysz, alpha=alpha_ysz)
 
     # Thermal load: uniform DeltaT for first run
     dT = 900.0 - 25.0  # C, treated like K difference
-    stress_th = (3.0 * lam + 2.0 * mu) * alpha * dT
-    th_stress = np.array([[[stress_th], [stress_th], [0.0]]], dtype=np.float64)
-    th = Material("th", stress=th_stress)
+    def thermal_stress(lam, mu, alpha, dT):
+        stress_th = (3.0 * lam + 2.0 * mu) * alpha * dT
+        return np.array([[[stress_th], [stress_th], [0.0]]], dtype=np.float64)
+
+    th_sub = Material("th_sub", stress=thermal_stress(lam_sub, mu_sub, alpha_sub, dT))
+    th_bond = Material(
+        "th_bond", stress=thermal_stress(lam_bond, mu_bond, alpha_bond, dT)
+    )
+    th_tgo = Material("th_tgo", stress=thermal_stress(lam_tgo, mu_tgo, alpha_tgo, dT))
+    th_ysz = Material("th_ysz", stress=thermal_stress(lam_ysz, mu_ysz, alpha_ysz, dT))
 
     integral = Integral("i", order=2)
 
     # Thermoelasticity weak form:
     # ∫ sigma(u):eps(v) dΩ - ∫ sigma_th:eps(v) dΩ = 0
-    t1 = Term.new(
-        "dw_lin_elastic_iso(m.lam, m.mu, v, u)", integral, omega, m=m, v=v, u=u
-    )
-    t2 = Term.new("dw_lin_prestress(th.stress, v)", integral, omega, th=th, v=v)
+    t1_terms = [
+        Term.new(
+            "dw_lin_elastic_iso(m_sub.lam, m_sub.mu, v, u)",
+            integral,
+            substrate,
+            m_sub=m_sub,
+            v=v,
+            u=u,
+        ),
+        Term.new(
+            "dw_lin_elastic_iso(m_bond.lam, m_bond.mu, v, u)",
+            integral,
+            bondcoat,
+            m_bond=m_bond,
+            v=v,
+            u=u,
+        ),
+        Term.new(
+            "dw_lin_elastic_iso(m_ysz.lam, m_ysz.mu, v, u)",
+            integral,
+            ysz,
+            m_ysz=m_ysz,
+            v=v,
+            u=u,
+        ),
+    ]
+
+    t2_terms = [
+        Term.new(
+            "dw_lin_prestress(th_sub.stress, v)", integral, substrate, th_sub=th_sub, v=v
+        ),
+        Term.new(
+            "dw_lin_prestress(th_bond.stress, v)",
+            integral,
+            bondcoat,
+            th_bond=th_bond,
+            v=v,
+        ),
+        Term.new(
+            "dw_lin_prestress(th_ysz.stress, v)", integral, ysz, th_ysz=th_ysz, v=v
+        ),
+    ]
+
+    if tgo.cells.shape[0] > 0:
+        t1_terms.append(
+            Term.new(
+                "dw_lin_elastic_iso(m_tgo.lam, m_tgo.mu, v, u)",
+                integral,
+                tgo,
+                m_tgo=m_tgo,
+                v=v,
+                u=u,
+            )
+        )
+        t2_terms.append(
+            Term.new(
+                "dw_lin_prestress(th_tgo.stress, v)", integral, tgo, th_tgo=th_tgo, v=v
+            )
+        )
+
+    t1 = Terms(t1_terms)
+    t2 = Terms(t2_terms)
 
     eq = Equation("balance", t1 - t2)
     eqs = Equations([eq])
