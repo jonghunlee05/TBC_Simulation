@@ -47,7 +47,7 @@ def _safe_nanmean(values, mask):
     return np.nanmean(values[mask])
 
 
-def extract_features(pb, regions, materials, y2, y3, output_csv):
+def extract_features(pb, regions, materials, y2, y3, output_csv, delta_t=None):
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
 
     mesh = pb.domain.mesh
@@ -83,6 +83,7 @@ def extract_features(pb, regions, materials, y2, y3, output_csv):
     mask_y3 = _interface_mask(ys, y3, dy)
 
     features = {
+        "delta_t": delta_t,
         "ysz_tgo_max_sigma_yy": _safe_nanmax(sigma_yy, mask_y3),
         "ysz_tgo_max_tau_xy": _safe_nanmax(np.abs(tau_xy), mask_y3),
         "ysz_tgo_mean_sed": _safe_nanmean(sed, mask_y3),
