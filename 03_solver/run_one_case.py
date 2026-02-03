@@ -239,6 +239,7 @@ def main():
             y3=y3,
             output_csv="05_outputs/features/sensitivity_deltaT.csv",
             delta_t=dT,
+            n_select=200,
         )
 
         print(f"Saved: {vtk_path}")

@@ -30,24 +30,13 @@ def _evaluate_region_stress_strain(pb, region, lam, mu, out_stress, out_strain):
     out_strain[region.cells] = strain
 
 
-def _interface_mask(ys, y_interface, dy):
-    tol = 0.5 * dy
-    return np.abs(ys - y_interface) <= tol
+def _nearest_element_indices(y_centroids, y_interface, n_select):
+    n_select = min(n_select, y_centroids.shape[0])
+    dist = np.abs(y_centroids - y_interface)
+    return np.argsort(dist)[:n_select]
 
 
-def _safe_nanmax(values, mask):
-    if not np.any(mask):
-        return np.nan
-    return np.nanmax(values[mask])
-
-
-def _safe_nanmean(values, mask):
-    if not np.any(mask):
-        return np.nan
-    return np.nanmean(values[mask])
-
-
-def extract_features(pb, regions, materials, y2, y3, output_csv, delta_t=None):
+def extract_features(pb, regions, materials, y2, y3, output_csv, delta_t=None, n_select=200):
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
 
     mesh = pb.domain.mesh
@@ -72,24 +61,28 @@ def extract_features(pb, regions, materials, y2, y3, output_csv, delta_t=None):
     # Stress/strain components: [xx, yy, xy] in 2D
     sigma_yy = stress[:, 1]
     tau_xy = stress[:, 2]
-    sed = 0.5 * (stress[:, 0] * strain[:, 0] + stress[:, 1] * strain[:, 1] + 2.0 * stress[:, 2] * strain[:, 2])
+    sed = 0.5 * (
+        stress[:, 0] * strain[:, 0]
+        + stress[:, 1] * strain[:, 1]
+        + 2.0 * stress[:, 2] * strain[:, 2]
+    )
 
-    centroids = pb.domain.get_centroids(dim=2)
-    ys = centroids[:, 1]
-    unique_y = np.unique(ys)
-    dy = np.median(np.diff(unique_y)) if unique_y.size > 1 else 1.0
+    mesh = pb.domain.mesh
+    conn = mesh.get_conn(mesh.descs[0])
+    centroids = mesh.coors[conn].mean(axis=1)
+    y_centroids = centroids[:, 1]
 
-    mask_y2 = _interface_mask(ys, y2, dy)
-    mask_y3 = _interface_mask(ys, y3, dy)
+    idx_ysz_tgo = _nearest_element_indices(y_centroids, y3, n_select)
+    idx_tgo_bc = _nearest_element_indices(y_centroids, y2, n_select)
 
     features = {
         "delta_t": delta_t,
-        "ysz_tgo_max_sigma_yy": _safe_nanmax(sigma_yy, mask_y3),
-        "ysz_tgo_max_tau_xy": _safe_nanmax(np.abs(tau_xy), mask_y3),
-        "ysz_tgo_mean_sed": _safe_nanmean(sed, mask_y3),
-        "tgo_bc_max_sigma_yy": _safe_nanmax(sigma_yy, mask_y2),
-        "tgo_bc_max_tau_xy": _safe_nanmax(np.abs(tau_xy), mask_y2),
-        "tgo_bc_mean_sed": _safe_nanmean(sed, mask_y2),
+        "ysz_tgo_max_sigma_yy": np.nanmax(sigma_yy[idx_ysz_tgo]),
+        "ysz_tgo_max_tau_xy": np.nanmax(np.abs(tau_xy[idx_ysz_tgo])),
+        "ysz_tgo_mean_sed": np.nanmean(sed[idx_ysz_tgo]),
+        "tgo_bc_max_sigma_yy": np.nanmax(sigma_yy[idx_tgo_bc]),
+        "tgo_bc_max_tau_xy": np.nanmax(np.abs(tau_xy[idx_tgo_bc])),
+        "tgo_bc_mean_sed": np.nanmean(sed[idx_tgo_bc]),
     }
 
     write_header = not os.path.exists(output_csv)
