@@ -1,28 +1,83 @@
+import os
+
 import numpy as np
+import yaml
 from sfepy.discrete.fem.mesh import Mesh
 
 
+def _load_geometry(spec_path):
+    with open(spec_path, "r", encoding="utf-8") as f:
+        spec = yaml.safe_load(f)
+
+    layers = {layer["name"]: float(layer["thickness_um"]) for layer in spec["layers"]}
+    domain = spec["domain"]
+
+    def _find_layer(name_fragment):
+        for name, thickness in layers.items():
+            if name_fragment.lower() in name.lower():
+                return thickness
+        raise KeyError(f"Layer with name containing '{name_fragment}' not found.")
+
+    geom = {
+        "width": float(domain["width_um"]),
+        "ysz": _find_layer("ysz"),
+        "tgo": _find_layer("tgo"),
+        "bond": _find_layer("bond"),
+        "sub": _find_layer("substrate"),
+    }
+    return geom
+
+
+def _segment_ys(start, end, dy):
+    if end <= start:
+        return np.array([start])
+    n = max(1, int(np.ceil((end - start) / dy)))
+    return np.linspace(start, end, n + 1)
+
+
+def _build_y_coords(ysz, tgo, bond, sub):
+    # Coarser in thick layers, refined in TGO.
+    dy_sub = 5.0
+    dy_bond = 2.0
+    dy_tgo = max(tgo / 3.0, 0.1)
+    dy_ysz = 2.0
+
+    y0 = 0.0
+    y1 = y0 + sub
+    y2 = y1 + bond
+    y3 = y2 + tgo
+    y4 = y3 + ysz
+
+    ys = []
+    ys.append(_segment_ys(y0, y1, dy_sub))
+    ys.append(_segment_ys(y1, y2, dy_bond)[1:])
+    ys.append(_segment_ys(y2, y3, dy_tgo)[1:])
+    ys.append(_segment_ys(y3, y4, dy_ysz)[1:])
+    return np.concatenate(ys)
+
+
 def main():
+    spec_path = os.path.join("00_inputs", "geometry_spec.yaml")
+    geom = _load_geometry(spec_path)
+
     # Units: micrometers (um)
-    width = 2000.0
-    ysz = 200.0
-    tgo = 1.0
-    bond = 150.0
-    sub = 1000.0
+    width = geom["width"]
+    ysz = geom["ysz"]
+    tgo = geom["tgo"]
+    bond = geom["bond"]
+    sub = geom["sub"]
 
-    height = ysz + tgo + bond + sub
-
-    # Refined in y to resolve thin TGO (~1 um).
-    nx, ny = 200, 1500
-
+    # Keep x uniform, adapt y by layer.
+    nx = 200
     xs = np.linspace(0.0, width, nx + 1)
-    ys = np.linspace(0.0, height, ny + 1)
+    ys = _build_y_coords(ysz, tgo, bond, sub)
 
     xx, yy = np.meshgrid(xs, ys)
     coors = np.c_[xx.ravel(), yy.ravel()]
 
     # Quad elements
     conn = []
+    ny = len(ys) - 1
     for j in range(ny):
         for i in range(nx):
             n0 = j * (nx + 1) + i

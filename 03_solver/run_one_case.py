@@ -2,7 +2,7 @@ import os
 import sys
 
 import numpy as np
-import yaml  # (we won't use yet, placeholder)
+import yaml
 from sfepy.discrete.fem import Mesh, FEDomain, Field
 from sfepy.base.base import Struct
 from sfepy.discrete import (
@@ -28,12 +28,38 @@ def main():
     os.makedirs("05_outputs/fields", exist_ok=True)
     os.makedirs("05_outputs/features", exist_ok=True)
 
+    with open(os.path.join("00_inputs", "geometry_spec.yaml"), "r", encoding="utf-8") as f:
+        geom_spec = yaml.safe_load(f)
+
+    layers = {layer["name"]: float(layer["thickness_um"]) for layer in geom_spec["layers"]}
+    width = float(geom_spec["domain"]["width_um"])
+
+    def _find_layer(name_fragment):
+        for name, thickness in layers.items():
+            if name_fragment.lower() in name.lower():
+                return thickness
+        raise KeyError(f"Layer with name containing '{name_fragment}' not found.")
+
+    ysz_th = _find_layer("ysz")
+    tgo_th = _find_layer("tgo")
+    bond_th = _find_layer("bond")
+    sub_th = _find_layer("substrate")
+
+    with open(os.path.join("00_inputs", "materials.yaml"), "r", encoding="utf-8") as f:
+        mats_spec = yaml.safe_load(f)["materials"]
+
+    def _mat_props(key):
+        mat = mats_spec[key]
+        return float(mat["E_GPa"]) * 1e9, float(mat["nu"]), float(mat["alpha_1K"])
+
     mesh = Mesh.from_file("02_mesh/tbc_2d.mesh")
     domain = FEDomain("domain", mesh)
 
     omega = domain.create_region("Omega", "all")
 
-    y0, y1, y2, y3, y4 = layer_limits()
+    y0, y1, y2, y3, y4 = layer_limits(
+        ysz=ysz_th, tgo=tgo_th, bond=bond_th, sub=sub_th
+    )
 
     def cells_in_y(min_y, max_y, include_top=False):
         def _selector(coors, domain=None):
@@ -66,7 +92,7 @@ def main():
 
     # Boundaries
     left = domain.create_region("Left", "vertices in x < 1e-6", "facet")
-    right = domain.create_region("Right", "vertices in x > 1999.999", "facet")
+    right = domain.create_region("Right", f"vertices in x > {width - 1e-6}", "facet")
     bottom = domain.create_region("Bottom", "vertices in y < 1e-6", "facet")
 
     # Field: displacement (2D)
@@ -81,20 +107,20 @@ def main():
         mu = E / (2 * (1 + nu))
         return lam, mu
 
-    lam_sub, mu_sub = lame_from_E_nu(200e9, 0.30)
-    alpha_sub = 13e-6
+    E_sub, nu_sub, alpha_sub = _mat_props("substrate")
+    lam_sub, mu_sub = lame_from_E_nu(E_sub, nu_sub)
     m_sub = Material("m_sub", lam=lam_sub, mu=mu_sub, alpha=alpha_sub)
 
-    lam_bond, mu_bond = lame_from_E_nu(180e9, 0.30)
-    alpha_bond = 14e-6
+    E_bond, nu_bond, alpha_bond = _mat_props("bondcoat")
+    lam_bond, mu_bond = lame_from_E_nu(E_bond, nu_bond)
     m_bond = Material("m_bond", lam=lam_bond, mu=mu_bond, alpha=alpha_bond)
 
-    lam_tgo, mu_tgo = lame_from_E_nu(350e9, 0.25)
-    alpha_tgo = 8e-6
+    E_tgo, nu_tgo, alpha_tgo = _mat_props("TGO_Al2O3")
+    lam_tgo, mu_tgo = lame_from_E_nu(E_tgo, nu_tgo)
     m_tgo = Material("m_tgo", lam=lam_tgo, mu=mu_tgo, alpha=alpha_tgo)
 
-    lam_ysz, mu_ysz = lame_from_E_nu(200e9, 0.23)
-    alpha_ysz = 10e-6
+    E_ysz, nu_ysz, alpha_ysz = _mat_props("YSZ")
+    lam_ysz, mu_ysz = lame_from_E_nu(E_ysz, nu_ysz)
     m_ysz = Material("m_ysz", lam=lam_ysz, mu=mu_ysz, alpha=alpha_ysz)
 
     def thermal_stress(lam, mu, alpha, dT):
