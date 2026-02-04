@@ -38,6 +38,7 @@ def _segment_ys(start, end, dy):
 
 def _build_y_coords(ysz, tgo, bond, sub, dy_scale=1.0):
     # Coarser in thick layers, refined in TGO.
+    # TODO: add sinusoidal interface roughness (amplitude + wavelength) here.
     dy_sub = 5.0 * dy_scale
     dy_bond = 2.0 * dy_scale
     dy_tgo = max(tgo / 3.0, 0.1) * dy_scale

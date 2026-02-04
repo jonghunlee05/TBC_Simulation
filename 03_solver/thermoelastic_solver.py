@@ -182,7 +182,7 @@ def build_case_context(geometry_path, materials_path, mesh_path, tol=1e-3):
     }
 
 
-def solve_delta_t(context, dT):
+def solve_delta_t(context, dT, growth_strain=0.0):
     regions = context["regions"]
     u = context["u"]
     v = context["v"]
@@ -201,7 +201,9 @@ def solve_delta_t(context, dT):
     )
     th_tgo = Material(
         "th_tgo",
-        stress=_thermal_stress(props["tgo"]["lam"], props["tgo"]["mu"], props["tgo"]["alpha"], dT),
+        stress=_thermal_stress(
+            props["tgo"]["lam"], props["tgo"]["mu"], props["tgo"]["alpha"], dT
+        ),
     )
     th_ysz = Material(
         "th_ysz",
@@ -279,6 +281,23 @@ def solve_delta_t(context, dT):
                 v=v,
             )
         )
+        if growth_strain > 0.0:
+            # Growth eigenstrain modeled as isotropic prestress in the TGO.
+            gr_tgo = Material(
+                "gr_tgo",
+                stress=_thermal_stress(
+                    props["tgo"]["lam"], props["tgo"]["mu"], growth_strain, 1.0
+                ),
+            )
+            t2_terms.append(
+                Term.new(
+                    "dw_lin_prestress(gr_tgo.stress, v)",
+                    integral,
+                    regions["tgo"],
+                    gr_tgo=gr_tgo,
+                    v=v,
+                )
+            )
 
     eq = Equation("balance", Terms(t1_terms) - Terms(t2_terms))
     eqs = Equations([eq])
