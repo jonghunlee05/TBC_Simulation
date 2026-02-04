@@ -68,11 +68,29 @@ def _cells_in_y(min_y, max_y, include_top=False):
     return _selector
 
 
-def build_case_context(geometry_path, materials_path, mesh_path):
+def build_case_context(geometry_path, materials_path, mesh_path, tol=1e-3):
     width, thicknesses = _load_geometry(geometry_path)
     mats_spec = _load_materials(materials_path)
 
     mesh = Mesh.from_file(mesh_path)
+    coors = mesh.coors
+    x_min, x_max = float(coors[:, 0].min()), float(coors[:, 0].max())
+    y_min, y_max = float(coors[:, 1].min()), float(coors[:, 1].max())
+    exp_height = (
+        thicknesses["sub"] + thicknesses["bond"] + thicknesses["tgo"] + thicknesses["ysz"]
+    )
+    if abs(x_min) > tol or abs(y_min) > tol:
+        raise ValueError(
+            f"Mesh origin mismatch: min coords ({x_min:.6g}, {y_min:.6g}) not near 0."
+        )
+    if abs(x_max - width) > tol:
+        raise ValueError(
+            f"Mesh width mismatch: mesh x_max={x_max:.6g} vs width={width:.6g}."
+        )
+    if abs(y_max - exp_height) > tol:
+        raise ValueError(
+            f"Mesh height mismatch: mesh y_max={y_max:.6g} vs height={exp_height:.6g}."
+        )
     domain = FEDomain("domain", mesh)
     omega = domain.create_region("Omega", "all")
 
@@ -151,6 +169,9 @@ def build_case_context(geometry_path, materials_path, mesh_path):
         "y2": y2,
         "y3": y3,
         "tgo_th": thicknesses["tgo"],
+        "ysz_th": thicknesses["ysz"],
+        "bond_th": thicknesses["bond"],
+        "sub_th": thicknesses["sub"],
         "props": {
             "substrate": {"E": E_sub, "alpha": alpha_sub, "lam": lam_sub, "mu": mu_sub},
             "bondcoat": {"E": E_bond, "alpha": alpha_bond, "lam": lam_bond, "mu": mu_bond},

@@ -41,6 +41,13 @@ def _find_layer_thickness(layers, name_fragment):
             return float(layer["thickness_um"])
     raise KeyError(f"Layer with name containing '{name_fragment}' not found.")
 
+def _set_layer_thickness(layers, name_fragment, thickness):
+    for layer in layers:
+        if name_fragment.lower() in layer["name"].lower():
+            layer["thickness_um"] = float(thickness)
+            return
+    raise KeyError(f"Layer with name containing '{name_fragment}' not found.")
+
 
 def _lhs_samples(bounds, n_samples, rng):
     low = float(bounds[0])
@@ -74,7 +81,7 @@ def main():
     parser.add_argument("--n_tgo", type=int, default=4, help="Number of TGO samples")
     parser.add_argument(
         "--sampling",
-        choices=["grid", "lhs", "oat_delta_t", "oat_tgo"],
+        choices=["grid", "lhs", "oat_delta_t", "oat_tgo", "oat_ysz", "oat_bond"],
         default="grid",
         help="Sampling mode for deltaT and TGO",
     )
@@ -103,6 +110,18 @@ def main():
         help="Fixed TGO thickness (um) for oat_delta_t",
     )
     parser.add_argument(
+        "--fixed_ysz",
+        type=float,
+        default=None,
+        help="Fixed YSZ thickness (um) for OAT modes",
+    )
+    parser.add_argument(
+        "--fixed_bond",
+        type=float,
+        default=None,
+        help="Fixed bondcoat thickness (um) for OAT modes",
+    )
+    parser.add_argument(
         "--output_csv",
         default=os.path.join("05_outputs", "features", "sweep_dataset.csv"),
         help="Output dataset CSV",
@@ -119,7 +138,11 @@ def main():
     base_geom = _load_geometry(repo_root / args.geometry)
 
     base_tgo = _find_layer_thickness(base_geom["layers"], "tgo")
+    base_ysz = _find_layer_thickness(base_geom["layers"], "ysz")
+    base_bond = _find_layer_thickness(base_geom["layers"], "bond")
     fixed_tgo = base_tgo if args.fixed_tgo is None else args.fixed_tgo
+    fixed_ysz = base_ysz if args.fixed_ysz is None else args.fixed_ysz
+    fixed_bond = base_bond if args.fixed_bond is None else args.fixed_bond
 
     if args.sampling == "lhs":
         rng = np.random.default_rng(args.seed)
@@ -127,35 +150,42 @@ def main():
         tgo_values = _lhs_samples(
             bounds["initial_TGO_thickness_um"], args.n_samples, rng
         )
-        pairs = list(zip(dt_values, tgo_values))
+        pairs = [(dt, tgo, fixed_ysz, fixed_bond) for dt, tgo in zip(dt_values, tgo_values)]
     elif args.sampling == "oat_delta_t":
         dt_values = _linspace_from_bounds(bounds["deltaT_C"], args.n_dt)
-        pairs = [(dt, fixed_tgo) for dt in dt_values]
+        pairs = [(dt, fixed_tgo, fixed_ysz, fixed_bond) for dt in dt_values]
     elif args.sampling == "oat_tgo":
         tgo_values = _linspace_from_bounds(bounds["initial_TGO_thickness_um"], args.n_tgo)
-        pairs = [(args.fixed_delta_t, tgo) for tgo in tgo_values]
+        pairs = [(args.fixed_delta_t, tgo, fixed_ysz, fixed_bond) for tgo in tgo_values]
+    elif args.sampling == "oat_ysz":
+        ysz_values = _linspace_from_bounds(bounds["YSZ_thickness_um"], args.n_tgo)
+        pairs = [(args.fixed_delta_t, fixed_tgo, ysz, fixed_bond) for ysz in ysz_values]
+    elif args.sampling == "oat_bond":
+        bond_values = _linspace_from_bounds(
+            bounds["bondcoat_thickness_um"], args.n_tgo
+        )
+        pairs = [(args.fixed_delta_t, fixed_tgo, fixed_ysz, bond) for bond in bond_values]
     else:
         dt_values = _linspace_from_bounds(bounds["deltaT_C"], args.n_dt)
         tgo_values = _linspace_from_bounds(bounds["initial_TGO_thickness_um"], args.n_tgo)
         pairs = list(itertools.product(dt_values, tgo_values))
+        pairs = [(dt, tgo, fixed_ysz, fixed_bond) for dt, tgo in pairs]
 
     cases_dir = repo_root / args.cases_dir
     cases_dir.mkdir(parents=True, exist_ok=True)
 
-    for idx, (delta_t, tgo_th) in enumerate(pairs, 1):
+    for idx, (delta_t, tgo_th, ysz_th, bond_th) in enumerate(pairs, 1):
         case_dir = cases_dir / f"case_{idx:04d}"
         case_dir.mkdir(parents=True, exist_ok=True)
 
         geom = dict(base_geom)
         geom_layers = []
         for layer in base_geom["layers"]:
-            if "tgo" in layer["name"].lower():
-                new_layer = dict(layer)
-                new_layer["thickness_um"] = float(tgo_th)
-                geom_layers.append(new_layer)
-            else:
-                geom_layers.append(dict(layer))
+            geom_layers.append(dict(layer))
         geom["layers"] = geom_layers
+        _set_layer_thickness(geom["layers"], "tgo", tgo_th)
+        _set_layer_thickness(geom["layers"], "ysz", ysz_th)
+        _set_layer_thickness(geom["layers"], "bond", bond_th)
 
         geom_path = case_dir / "geometry_spec.yaml"
         mesh_path = case_dir / "tbc_2d.mesh"

@@ -57,6 +57,8 @@ def main():
     for dT in dT_values:
         pb, state, out = solve_delta_t(context, dT)
         tgo_th = context["tgo_th"]
+        ysz_th = context["ysz_th"]
+        bond_th = context["bond_th"]
 
         vtk_path = os.path.join(args.fields_dir, f"u_snapshot_dT_{int(dT)}.vtk")
         pb.save_state(vtk_path, state, out=out)
@@ -81,7 +83,11 @@ def main():
             output_csv=args.output_csv,
             delta_t=dT,
             n_select=args.n_select,
-            extra_fields={"tgo_thickness_um": tgo_th},
+            extra_fields={
+                "tgo_thickness_um": tgo_th,
+                "ysz_thickness_um": ysz_th,
+                "bondcoat_thickness_um": bond_th,
+            },
         )
 
         scale_sub = context["props"]["substrate"]["E"] * context["props"]["substrate"]["alpha"] * dT
