@@ -1,3 +1,4 @@
+import argparse
 import os
 
 import numpy as np
@@ -35,12 +36,12 @@ def _segment_ys(start, end, dy):
     return np.linspace(start, end, n + 1)
 
 
-def _build_y_coords(ysz, tgo, bond, sub):
+def _build_y_coords(ysz, tgo, bond, sub, dy_scale=1.0):
     # Coarser in thick layers, refined in TGO.
-    dy_sub = 5.0
-    dy_bond = 2.0
-    dy_tgo = max(tgo / 3.0, 0.1)
-    dy_ysz = 2.0
+    dy_sub = 5.0 * dy_scale
+    dy_bond = 2.0 * dy_scale
+    dy_tgo = max(tgo / 3.0, 0.1) * dy_scale
+    dy_ysz = 2.0 * dy_scale
 
     y0 = 0.0
     y1 = y0 + sub
@@ -56,8 +57,7 @@ def _build_y_coords(ysz, tgo, bond, sub):
     return np.concatenate(ys)
 
 
-def main():
-    spec_path = os.path.join("00_inputs", "geometry_spec.yaml")
+def build_mesh(spec_path, mesh_path, nx=200, dy_scale=1.0):
     geom = _load_geometry(spec_path)
 
     # Units: micrometers (um)
@@ -68,9 +68,8 @@ def main():
     sub = geom["sub"]
 
     # Keep x uniform, adapt y by layer.
-    nx = 200
     xs = np.linspace(0.0, width, nx + 1)
-    ys = _build_y_coords(ysz, tgo, bond, sub)
+    ys = _build_y_coords(ysz, tgo, bond, sub, dy_scale=dy_scale)
 
     xx, yy = np.meshgrid(xs, ys)
     coors = np.c_[xx.ravel(), yy.ravel()]
@@ -96,7 +95,36 @@ def main():
         ["2_4"],
     )
 
-    mesh.write("02_mesh/tbc_2d.mesh")
+    mesh.write(mesh_path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate structured 2D mesh.")
+    parser.add_argument(
+        "--spec",
+        default=os.path.join("00_inputs", "geometry_spec.yaml"),
+        help="Path to geometry_spec.yaml",
+    )
+    parser.add_argument(
+        "--mesh",
+        default=os.path.join("02_mesh", "tbc_2d.mesh"),
+        help="Output mesh path",
+    )
+    parser.add_argument(
+        "--nx",
+        type=int,
+        default=200,
+        help="Number of x divisions",
+    )
+    parser.add_argument(
+        "--dy_scale",
+        type=float,
+        default=1.0,
+        help="Scale factor for y-direction spacing",
+    )
+    args = parser.parse_args()
+
+    build_mesh(args.spec, args.mesh, nx=args.nx, dy_scale=args.dy_scale)
 
 
 if __name__ == "__main__":

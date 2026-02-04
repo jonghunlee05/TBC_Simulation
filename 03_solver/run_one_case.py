@@ -1,271 +1,110 @@
+import argparse
 import os
 import sys
 
-import numpy as np
-import yaml
-from sfepy.discrete.fem import Mesh, FEDomain, Field
-from sfepy.base.base import Struct
-from sfepy.discrete import (
-    FieldVariable,
-    Material,
-    Integral,
-    Equation,
-    Equations,
-    Problem,
-)
-from sfepy.terms import Term, Terms
-from sfepy.discrete.conditions import Conditions, EssentialBC
-from sfepy.solvers.ls import ScipyDirect
-from sfepy.solvers.nls import Newton
-
-
-sys.path.append(os.path.dirname(__file__))
-from regions import layer_limits
+sys.path.insert(0, os.path.dirname(__file__))
 from extract_features import extract_features
+from thermoelastic_solver import build_case_context, solve_delta_t
 
 
 def main():
-    os.makedirs("05_outputs/fields", exist_ok=True)
-    os.makedirs("05_outputs/features", exist_ok=True)
-
-    with open(os.path.join("00_inputs", "geometry_spec.yaml"), "r", encoding="utf-8") as f:
-        geom_spec = yaml.safe_load(f)
-
-    layers = {layer["name"]: float(layer["thickness_um"]) for layer in geom_spec["layers"]}
-    width = float(geom_spec["domain"]["width_um"])
-
-    def _find_layer(name_fragment):
-        for name, thickness in layers.items():
-            if name_fragment.lower() in name.lower():
-                return thickness
-        raise KeyError(f"Layer with name containing '{name_fragment}' not found.")
-
-    ysz_th = _find_layer("ysz")
-    tgo_th = _find_layer("tgo")
-    bond_th = _find_layer("bond")
-    sub_th = _find_layer("substrate")
-
-    with open(os.path.join("00_inputs", "materials.yaml"), "r", encoding="utf-8") as f:
-        mats_spec = yaml.safe_load(f)["materials"]
-
-    def _mat_props(key):
-        mat = mats_spec[key]
-        return float(mat["E_GPa"]) * 1e9, float(mat["nu"]), float(mat["alpha_1K"])
-
-    mesh = Mesh.from_file("02_mesh/tbc_2d.mesh")
-    domain = FEDomain("domain", mesh)
-
-    omega = domain.create_region("Omega", "all")
-
-    y0, y1, y2, y3, y4 = layer_limits(
-        ysz=ysz_th, tgo=tgo_th, bond=bond_th, sub=sub_th
+    parser = argparse.ArgumentParser(description="Run one thermoelastic case.")
+    parser.add_argument(
+        "--geometry",
+        default=os.path.join("00_inputs", "geometry_spec.yaml"),
+        help="Path to geometry_spec.yaml",
     )
-
-    def cells_in_y(min_y, max_y, include_top=False):
-        def _selector(coors, domain=None):
-            ys = coors[:, 1]
-            if include_top:
-                return np.where((ys >= min_y) & (ys <= max_y))[0]
-            return np.where((ys >= min_y) & (ys < max_y))[0]
-
-        return _selector
-
-    region_functions = {
-        "cells_substrate": cells_in_y(y0, y1),
-        "cells_bondcoat": cells_in_y(y1, y2),
-        "cells_tgo": cells_in_y(y2, y3),
-        "cells_ysz": cells_in_y(y3, y4, include_top=True),
-    }
-
-    substrate = domain.create_region(
-        "Substrate", "cells by cells_substrate", "cell", functions=region_functions
+    parser.add_argument(
+        "--materials",
+        default=os.path.join("00_inputs", "materials.yaml"),
+        help="Path to materials.yaml",
     )
-    bondcoat = domain.create_region(
-        "Bondcoat", "cells by cells_bondcoat", "cell", functions=region_functions
+    parser.add_argument(
+        "--mesh",
+        default=os.path.join("02_mesh", "tbc_2d.mesh"),
+        help="Mesh path",
     )
-    tgo = domain.create_region(
-        "TGO", "cells by cells_tgo", "cell", functions=region_functions, allow_empty=True
+    parser.add_argument(
+        "--delta_t",
+        type=float,
+        nargs="+",
+        default=None,
+        help="One or more delta-T values (C)",
     )
-    ysz = domain.create_region(
-        "YSZ", "cells by cells_ysz", "cell", functions=region_functions
+    parser.add_argument(
+        "--output_csv",
+        default=os.path.join("05_outputs", "features", "sensitivity_deltaT.csv"),
+        help="CSV output path for interface features",
     )
+    parser.add_argument(
+        "--fields_dir",
+        default=os.path.join("05_outputs", "fields"),
+        help="Directory for VTK field outputs",
+    )
+    parser.add_argument(
+        "--n_select",
+        type=int,
+        default=200,
+        help="Number of elements nearest each interface to sample",
+    )
+    args = parser.parse_args()
 
-    # Boundaries
-    left = domain.create_region("Left", "vertices in x < 1e-6", "facet")
-    right = domain.create_region("Right", f"vertices in x > {width - 1e-6}", "facet")
-    bottom = domain.create_region("Bottom", "vertices in y < 1e-6", "facet")
+    os.makedirs(args.fields_dir, exist_ok=True)
+    os.makedirs(os.path.dirname(args.output_csv), exist_ok=True)
 
-    # Field: displacement (2D)
-    field = Field.from_args("displacement", np.float64, "vector", omega, approx_order=1)
-
-    u = FieldVariable("u", "unknown", field)
-    v = FieldVariable("v", "test", field, primary_var_name="u")
-
-    # ---- Materials (placeholders, per-layer for this run) ----
-    def lame_from_E_nu(E, nu):
-        lam = E * nu / ((1 + nu) * (1 - 2 * nu))
-        mu = E / (2 * (1 + nu))
-        return lam, mu
-
-    E_sub, nu_sub, alpha_sub = _mat_props("substrate")
-    lam_sub, mu_sub = lame_from_E_nu(E_sub, nu_sub)
-    m_sub = Material("m_sub", lam=lam_sub, mu=mu_sub, alpha=alpha_sub)
-
-    E_bond, nu_bond, alpha_bond = _mat_props("bondcoat")
-    lam_bond, mu_bond = lame_from_E_nu(E_bond, nu_bond)
-    m_bond = Material("m_bond", lam=lam_bond, mu=mu_bond, alpha=alpha_bond)
-
-    E_tgo, nu_tgo, alpha_tgo = _mat_props("TGO_Al2O3")
-    lam_tgo, mu_tgo = lame_from_E_nu(E_tgo, nu_tgo)
-    m_tgo = Material("m_tgo", lam=lam_tgo, mu=mu_tgo, alpha=alpha_tgo)
-
-    E_ysz, nu_ysz, alpha_ysz = _mat_props("YSZ")
-    lam_ysz, mu_ysz = lame_from_E_nu(E_ysz, nu_ysz)
-    m_ysz = Material("m_ysz", lam=lam_ysz, mu=mu_ysz, alpha=alpha_ysz)
-
-    def thermal_stress(lam, mu, alpha, dT):
-        stress_th = (3.0 * lam + 2.0 * mu) * alpha * dT
-        return np.array([[[stress_th], [stress_th], [0.0]]], dtype=np.float64)
-
-    integral = Integral("i", order=2)
-
-    dT_values = [600.0, 750.0, 900.0, 1050.0]
+    context = build_case_context(args.geometry, args.materials, args.mesh)
+    dT_values = args.delta_t or [600.0, 750.0, 900.0, 1050.0]
     for dT in dT_values:
-        th_sub = Material("th_sub", stress=thermal_stress(lam_sub, mu_sub, alpha_sub, dT))
-        th_bond = Material(
-            "th_bond", stress=thermal_stress(lam_bond, mu_bond, alpha_bond, dT)
-        )
-        th_tgo = Material("th_tgo", stress=thermal_stress(lam_tgo, mu_tgo, alpha_tgo, dT))
-        th_ysz = Material("th_ysz", stress=thermal_stress(lam_ysz, mu_ysz, alpha_ysz, dT))
+        pb, state, out = solve_delta_t(context, dT)
+        tgo_th = context["tgo_th"]
 
-        # Thermoelasticity weak form:
-        # ∫ sigma(u):eps(v) dΩ - ∫ sigma_th:eps(v) dΩ = 0
-        t1_terms = [
-            Term.new(
-                "dw_lin_elastic_iso(m_sub.lam, m_sub.mu, v, u)",
-                integral,
-                substrate,
-                m_sub=m_sub,
-                v=v,
-                u=u,
-            ),
-            Term.new(
-                "dw_lin_elastic_iso(m_bond.lam, m_bond.mu, v, u)",
-                integral,
-                bondcoat,
-                m_bond=m_bond,
-                v=v,
-                u=u,
-            ),
-            Term.new(
-                "dw_lin_elastic_iso(m_ysz.lam, m_ysz.mu, v, u)",
-                integral,
-                ysz,
-                m_ysz=m_ysz,
-                v=v,
-                u=u,
-            ),
-        ]
-
-        t2_terms = [
-            Term.new(
-                "dw_lin_prestress(th_sub.stress, v)",
-                integral,
-                substrate,
-                th_sub=th_sub,
-                v=v,
-            ),
-            Term.new(
-                "dw_lin_prestress(th_bond.stress, v)",
-                integral,
-                bondcoat,
-                th_bond=th_bond,
-                v=v,
-            ),
-            Term.new(
-                "dw_lin_prestress(th_ysz.stress, v)", integral, ysz, th_ysz=th_ysz, v=v
-            ),
-        ]
-
-        if tgo.cells.shape[0] > 0:
-            t1_terms.append(
-                Term.new(
-                    "dw_lin_elastic_iso(m_tgo.lam, m_tgo.mu, v, u)",
-                    integral,
-                    tgo,
-                    m_tgo=m_tgo,
-                    v=v,
-                    u=u,
-                )
-            )
-            t2_terms.append(
-                Term.new(
-                    "dw_lin_prestress(th_tgo.stress, v)",
-                    integral,
-                    tgo,
-                    th_tgo=th_tgo,
-                    v=v,
-                )
-            )
-
-        t1 = Terms(t1_terms)
-        t2 = Terms(t2_terms)
-
-        eq = Equation("balance", t1 - t2)
-        eqs = Equations([eq])
-
-        # Boundary conditions: fix bottom in y, fix one point in x (avoid rigid body)
-        bc_bottom = EssentialBC("bc_bottom", bottom, {"u.1": 0.0})
-        bc_left = EssentialBC("bc_left", left, {"u.0": 0.0})
-
-        pb = Problem(f"tbc_thermoelastic_snapshot_dT_{int(dT)}", equations=eqs)
-        pb.time_update(ebcs=Conditions([bc_bottom, bc_left]))
-
-        pb.set_solver(Newton({}, lin_solver=ScipyDirect({})))
-
-        state = pb.solve()
-
-        out = state.create_output()
-
-        # Add a cell-wise layer id so ParaView can visualize the regions.
-        n_cells = mesh.n_el
-        layer_id = np.full(n_cells, -1, dtype=np.int32)
-        layer_id[substrate.cells] = 0
-        layer_id[bondcoat.cells] = 1
-        if tgo.cells.shape[0] > 0:
-            layer_id[tgo.cells] = 2
-        layer_id[ysz.cells] = 3
-
-        layer_id_simple = layer_id.astype(np.float64)[:, None]
-        out["layer_id"] = Struct(
-            name="layer_id",
-            mode="cell",
-            data=layer_id_simple[:, None, :, None],
-            var_name="layer_id",
-        )
-
-        vtk_path = f"05_outputs/fields/u_snapshot_dT_{int(dT)}.vtk"
+        vtk_path = os.path.join(args.fields_dir, f"u_snapshot_dT_{int(dT)}.vtk")
         pb.save_state(vtk_path, state, out=out)
 
-        extract_features(
+        features = extract_features(
             pb,
-            regions={
-                "substrate": substrate,
-                "bondcoat": bondcoat,
-                "tgo": tgo,
-                "ysz": ysz,
-            },
+            regions=context["regions"],
             materials={
-                "substrate": {"lam": lam_sub, "mu": mu_sub},
-                "bondcoat": {"lam": lam_bond, "mu": mu_bond},
-                "tgo": {"lam": lam_tgo, "mu": mu_tgo},
-                "ysz": {"lam": lam_ysz, "mu": mu_ysz},
+                "substrate": {
+                    "lam": context["props"]["substrate"]["lam"],
+                    "mu": context["props"]["substrate"]["mu"],
+                },
+                "bondcoat": {
+                    "lam": context["props"]["bondcoat"]["lam"],
+                    "mu": context["props"]["bondcoat"]["mu"],
+                },
+                "tgo": {"lam": context["props"]["tgo"]["lam"], "mu": context["props"]["tgo"]["mu"]},
+                "ysz": {"lam": context["props"]["ysz"]["lam"], "mu": context["props"]["ysz"]["mu"]},
             },
-            y2=y2,
-            y3=y3,
-            output_csv="05_outputs/features/sensitivity_deltaT.csv",
+            y2=context["y2"],
+            y3=context["y3"],
+            output_csv=args.output_csv,
             delta_t=dT,
-            n_select=200,
+            n_select=args.n_select,
+            extra_fields={"tgo_thickness_um": tgo_th},
+        )
+
+        scale_sub = context["props"]["substrate"]["E"] * context["props"]["substrate"]["alpha"] * dT
+        scale_bond = context["props"]["bondcoat"]["E"] * context["props"]["bondcoat"]["alpha"] * dT
+        scale_tgo = context["props"]["tgo"]["E"] * context["props"]["tgo"]["alpha"] * dT
+        scale_ysz = context["props"]["ysz"]["E"] * context["props"]["ysz"]["alpha"] * dT
+        scale_max = max(scale_sub, scale_bond, scale_tgo, scale_ysz)
+        ysz_tgo_sigma = features["ysz_tgo_max_sigma_yy"]
+        tgo_bc_sigma = features["tgo_bc_max_sigma_yy"]
+
+        print(
+            "Sanity dT={:.1f}C | E*a*dT GPa: sub={:.2f}, bond={:.2f}, tgo={:.2f}, ysz={:.2f} "
+            "| sigma_yy_max GPa: ysz_tgo={:.2f}, tgo_bc={:.2f} | ratios to max scale: {:.2f}, {:.2f}".format(
+                dT,
+                scale_sub / 1e9,
+                scale_bond / 1e9,
+                scale_tgo / 1e9,
+                scale_ysz / 1e9,
+                ysz_tgo_sigma / 1e9,
+                tgo_bc_sigma / 1e9,
+                ysz_tgo_sigma / scale_max,
+                tgo_bc_sigma / scale_max,
+            )
         )
 
         print(f"Saved: {vtk_path}")

@@ -36,7 +36,17 @@ def _nearest_element_indices(y_centroids, y_interface, n_select):
     return np.argsort(dist)[:n_select]
 
 
-def extract_features(pb, regions, materials, y2, y3, output_csv, delta_t=None, n_select=200):
+def extract_features(
+    pb,
+    regions,
+    materials,
+    y2,
+    y3,
+    output_csv,
+    delta_t=None,
+    n_select=200,
+    extra_fields=None,
+):
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
 
     mesh = pb.domain.mesh
@@ -84,6 +94,8 @@ def extract_features(pb, regions, materials, y2, y3, output_csv, delta_t=None, n
         "tgo_bc_max_tau_xy": np.nanmax(np.abs(tau_xy[idx_tgo_bc])),
         "tgo_bc_mean_sed": np.nanmean(sed[idx_tgo_bc]),
     }
+    if extra_fields is not None:
+        features.update(extra_fields)
 
     write_header = not os.path.exists(output_csv)
     with open(output_csv, "a", newline="", encoding="utf-8") as f:
@@ -91,3 +103,4 @@ def extract_features(pb, regions, materials, y2, y3, output_csv, delta_t=None, n
         if write_header:
             writer.writeheader()
         writer.writerow(features)
+    return features
