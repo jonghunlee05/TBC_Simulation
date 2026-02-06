@@ -183,6 +183,13 @@ def build_case_context(geometry_path, materials_path, mesh_path, tol=1e-3):
 
 
 def solve_delta_t(context, dT, growth_strain=0.0):
+    """
+    Solve a uniform temperature step with optional TGO growth eigenstrain.
+
+    Growth strain is treated as an isotropic eigenstrain in the TGO. This is a
+    first-order approximation that captures volumetric expansion due to oxidation
+    without modeling full inelasticity or damage.
+    """
     regions = context["regions"]
     u = context["u"]
     v = context["v"]
@@ -283,6 +290,7 @@ def solve_delta_t(context, dT, growth_strain=0.0):
         )
         if growth_strain > 0.0:
             # Growth eigenstrain modeled as isotropic prestress in the TGO.
+            # This keeps the model linear while capturing oxidation expansion.
             gr_tgo = Material(
                 "gr_tgo",
                 stress=_thermal_stress(

@@ -1,4 +1,5 @@
 import argparse
+import logging
 import math
 import os
 import sys
@@ -82,11 +83,90 @@ def _load_kp(bounds_path):
 
 
 def _growth_update(h_um, k_p_m2_s, dt_s):
-    """Apply parabolic growth update in micrometers."""
+    """Apply parabolic growth update in micrometers (um)."""
     # Convert k_p (m^2/s) to um^2/s before applying.
     k_p_um2_s = k_p_m2_s * 1.0e12
     h_new = math.sqrt(max(0.0, h_um * h_um + k_p_um2_s * dt_s))
     return h_new
+
+
+def _setup_logger(log_path):
+    logger = logging.getLogger("thermal_cycles")
+    logger.setLevel(logging.INFO)
+    logger.handlers = []
+    formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+    logger.addHandler(stream_handler)
+    return logger
+
+
+def _validate_growth(tgo_history):
+    if any(tgo_history[i] < tgo_history[i - 1] for i in range(1, len(tgo_history))):
+        raise ValueError("TGO thickness is not monotonically increasing.")
+
+
+def _check_feature_variation(feature_rows, tol=1e-6):
+    by_state = {"min": [], "max": []}
+    for row in feature_rows:
+        by_state[row["t_state"]].append(row)
+
+    def _all_close(values):
+        if not values:
+            return True
+        v0 = values[0]
+        return all(abs(v - v0) <= tol for v in values[1:])
+
+    warnings = []
+    for t_state, rows in by_state.items():
+        sigma_vals = [r["ysz_tgo_max_sigma_yy"] for r in rows]
+        tau_vals = [r["ysz_tgo_max_tau_xy"] for r in rows]
+        if _all_close(sigma_vals):
+            warnings.append(f"{t_state}: ysz_tgo_max_sigma_yy appears constant")
+        if _all_close(tau_vals):
+            warnings.append(f"{t_state}: ysz_tgo_max_tau_xy appears constant")
+    return warnings
+
+
+def _write_validation_plots(feature_rows, plot_dir):
+    import matplotlib.pyplot as plt
+
+    os.makedirs(plot_dir, exist_ok=True)
+    cycles = sorted({row["cycle_id"] for row in feature_rows})
+    tgo_by_cycle = {c: None for c in cycles}
+    for row in feature_rows:
+        tgo_by_cycle[row["cycle_id"]] = row["tgo_thickness_um"]
+    plt.figure()
+    plt.plot(cycles, [tgo_by_cycle[c] for c in cycles], marker="o")
+    plt.xlabel("Cycle")
+    plt.ylabel("TGO thickness (um)")
+    plt.title("TGO Thickness vs Cycle")
+    plt.savefig(os.path.join(plot_dir, "tgo_thickness_vs_cycle.png"), dpi=200)
+    plt.close()
+
+    for metric, fname, ylabel in [
+        ("ysz_tgo_max_sigma_yy", "sigma_yy_vs_cycle.png", "Max sigma_yy (Pa)"),
+        ("ysz_tgo_max_tau_xy", "tau_xy_vs_cycle.png", "Max tau_xy (Pa)"),
+    ]:
+        plt.figure()
+        for t_state in ("min", "max"):
+            values = [
+                row[metric]
+                for row in feature_rows
+                if row["t_state"] == t_state
+            ]
+            plt.plot(cycles, values, marker="o", label=f"{t_state} state")
+        plt.xlabel("Cycle")
+        plt.ylabel(ylabel)
+        plt.title(metric.replace("_", " ").title())
+        plt.legend()
+        plt.savefig(os.path.join(plot_dir, fname), dpi=200)
+        plt.close()
 
 
 def main():
@@ -142,12 +222,19 @@ def main():
         action="store_true",
         help="Save VTK fields per cycle state",
     )
+    parser.add_argument(
+        "--disable_growth_strain",
+        action="store_true",
+        help="Disable TGO growth eigenstrain for comparison runs",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.runs_dir, exist_ok=True)
     os.makedirs(os.path.dirname(args.output_csv), exist_ok=True)
     if args.save_fields:
         os.makedirs(args.fields_dir, exist_ok=True)
+
+    logger = _setup_logger(os.path.join(args.runs_dir, "thermal_cycles.log"))
 
     cycle = _load_cycle(args.cycle)
     base_geom = _load_geometry(args.geometry)
@@ -159,12 +246,18 @@ def main():
     bond_th = _find_layer_thickness(base_geom["layers"], "bond")
 
     dt_cycle = cycle["heating_time"] + cycle["hold_time"] + cycle["cooling_time"]
+    if dt_cycle <= 0.0:
+        raise ValueError("Cycle time must be positive for TGO growth.")
+
+    feature_rows = []
+    tgo_history = []
     for cycle_id in range(1, cycle["n_cycles"] + 1):
         # Parabolic growth once per cycle (quasi-static approximation).
         tgo_next = _growth_update(tgo_th, k_p, dt_cycle)
         delta_h = max(0.0, tgo_next - tgo_th)
         growth_strain = delta_h / max(tgo_th, 1e-12)
         tgo_th = tgo_next
+        tgo_history.append(tgo_th)
 
         cycle_dir = os.path.join(args.runs_dir, f"cycle_{cycle_id:04d}")
         os.makedirs(cycle_dir, exist_ok=True)
@@ -185,7 +278,17 @@ def main():
         for t_state, t_val in (("min", cycle["t_min"]), ("max", cycle["t_max"])):
             # Uniform temperature relative to the minimum state.
             delta_t = t_val - cycle["t_min"]
-            pb, state, out = solve_delta_t(context, delta_t, growth_strain=growth_strain)
+            applied_growth = 0.0 if args.disable_growth_strain else growth_strain
+            logger.info(
+                "cycle=%s state=%s TGO=%.6f um growth_strain=%.6e",
+                cycle_id,
+                t_state,
+                tgo_th,
+                applied_growth,
+            )
+            pb, state, out = solve_delta_t(
+                context, delta_t, growth_strain=applied_growth
+            )
 
             if args.save_fields:
                 vtk_path = os.path.join(
@@ -194,7 +297,7 @@ def main():
                 )
                 pb.save_state(vtk_path, state, out=out)
 
-            extract_features(
+            features = extract_features(
                 pb,
                 regions=context["regions"],
                 materials={
@@ -226,9 +329,19 @@ def main():
                     "ysz_thickness_um": ysz_th,
                     "bondcoat_thickness_um": bond_th,
                     "k_p_m2_s": k_p,
-                    "growth_strain": growth_strain,
+                    "growth_strain": applied_growth,
                 },
             )
+            feature_rows.append(features)
+
+    _validate_growth(tgo_history)
+    warnings = _check_feature_variation(feature_rows)
+    if warnings:
+        for warning in warnings:
+            logger.warning("Feature variation check: %s", warning)
+    _write_validation_plots(
+        feature_rows, os.path.join("05_outputs", "validation_plots")
+    )
 
 
 if __name__ == "__main__":
