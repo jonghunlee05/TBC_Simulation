@@ -174,7 +174,9 @@ def main():
     cases_dir = repo_root / args.cases_dir
     cases_dir.mkdir(parents=True, exist_ok=True)
 
+    total_cases = len(pairs)
     for idx, (delta_t, tgo_th, ysz_th, bond_th) in enumerate(pairs, 1):
+        print(f"Case {idx}/{total_cases}")
         case_dir = cases_dir / f"case_{idx:04d}"
         case_dir.mkdir(parents=True, exist_ok=True)
 

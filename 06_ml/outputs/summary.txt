@@ -1,0 +1,4 @@
+ridge: R2=0.995, MAE=1.156e+06
+rf: R2=1.000, MAE=2.076e+05
+Top ridge feature: delta_t
+Top rf feature: delta_t

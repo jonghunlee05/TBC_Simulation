@@ -1,0 +1,10 @@
+Dominant parameters:
+- Use rf_importance.csv for ranked drivers.
+
+Interaction evidence:
+- Risk heatmap reflects joint dependence on delta_t and TGO thickness.
+
+Limitations:
+- Linear elasticity, no creep or cracking.
+- Uniform temperature per cycle state.
+- Risk is an elastic upper-bound proxy.
