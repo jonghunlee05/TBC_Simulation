@@ -47,6 +47,66 @@ def main():
         default=200,
         help="Number of elements nearest each interface to sample",
     )
+    parser.add_argument(
+        "--alpha_scale_ysz",
+        type=float,
+        default=None,
+        help="Optional metadata: YSZ CTE scaling factor",
+    )
+    parser.add_argument(
+        "--alpha_scale_sub",
+        type=float,
+        default=None,
+        help="Optional metadata: substrate CTE scaling factor",
+    )
+    parser.add_argument(
+        "--alpha_scale_bond",
+        type=float,
+        default=None,
+        help="Optional metadata: bondcoat CTE scaling factor",
+    )
+    parser.add_argument(
+        "--alpha_scale_tgo",
+        type=float,
+        default=None,
+        help="Optional metadata: TGO CTE scaling factor",
+    )
+    parser.add_argument(
+        "--E_scale_ysz",
+        type=float,
+        default=None,
+        help="Optional metadata: YSZ elastic modulus scaling factor",
+    )
+    parser.add_argument(
+        "--E_scale_sub",
+        type=float,
+        default=None,
+        help="Optional metadata: substrate elastic modulus scaling factor",
+    )
+    parser.add_argument(
+        "--E_scale_bond",
+        type=float,
+        default=None,
+        help="Optional metadata: bondcoat elastic modulus scaling factor",
+    )
+    parser.add_argument(
+        "--E_scale_tgo",
+        type=float,
+        default=None,
+        help="Optional metadata: TGO elastic modulus scaling factor",
+    )
+    parser.add_argument(
+        "--roughness_amplitude",
+        type=float,
+        default=None,
+        help="Optional metadata: roughness amplitude (um)",
+    )
+    parser.add_argument(
+        "--roughness_wavelength",
+        type=float,
+        default=None,
+        help="Optional metadata: roughness wavelength (um)",
+    )
     args = parser.parse_args()
 
     os.makedirs(args.fields_dir, exist_ok=True)
@@ -62,6 +122,32 @@ def main():
 
         vtk_path = os.path.join(args.fields_dir, f"u_snapshot_dT_{int(dT)}.vtk")
         pb.save_state(vtk_path, state, out=out)
+
+        extra_fields = {
+            "tgo_thickness_um": tgo_th,
+            "ysz_thickness_um": ysz_th,
+            "bondcoat_thickness_um": bond_th,
+        }
+        if args.alpha_scale_ysz is not None:
+            extra_fields["alpha_scale_ysz"] = args.alpha_scale_ysz
+        if args.alpha_scale_sub is not None:
+            extra_fields["alpha_scale_sub"] = args.alpha_scale_sub
+        if args.alpha_scale_bond is not None:
+            extra_fields["alpha_scale_bond"] = args.alpha_scale_bond
+        if args.alpha_scale_tgo is not None:
+            extra_fields["alpha_scale_tgo"] = args.alpha_scale_tgo
+        if args.E_scale_ysz is not None:
+            extra_fields["E_scale_ysz"] = args.E_scale_ysz
+        if args.E_scale_sub is not None:
+            extra_fields["E_scale_sub"] = args.E_scale_sub
+        if args.E_scale_bond is not None:
+            extra_fields["E_scale_bond"] = args.E_scale_bond
+        if args.E_scale_tgo is not None:
+            extra_fields["E_scale_tgo"] = args.E_scale_tgo
+        if args.roughness_amplitude is not None:
+            extra_fields["roughness_amplitude_um"] = args.roughness_amplitude
+        if args.roughness_wavelength is not None:
+            extra_fields["roughness_wavelength_um"] = args.roughness_wavelength
 
         features = extract_features(
             pb,
@@ -83,11 +169,7 @@ def main():
             output_csv=args.output_csv,
             delta_t=dT,
             n_select=args.n_select,
-            extra_fields={
-                "tgo_thickness_um": tgo_th,
-                "ysz_thickness_um": ysz_th,
-                "bondcoat_thickness_um": bond_th,
-            },
+            extra_fields=extra_fields,
         )
 
         scale_sub = context["props"]["substrate"]["E"] * context["props"]["substrate"]["alpha"] * dT

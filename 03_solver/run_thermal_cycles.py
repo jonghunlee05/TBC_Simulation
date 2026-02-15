@@ -199,6 +199,23 @@ def main():
         help="Parabolic growth constant (m^2/s)",
     )
     parser.add_argument(
+        "--arrhenius_growth",
+        action="store_true",
+        help="Enable Arrhenius temperature-dependent k_p",
+    )
+    parser.add_argument(
+        "--kp0",
+        type=float,
+        default=None,
+        help="Arrhenius pre-exponential k_p0 (m^2/s)",
+    )
+    parser.add_argument(
+        "--Q",
+        type=float,
+        default=None,
+        help="Arrhenius activation energy Q (J/mol)",
+    )
+    parser.add_argument(
         "--output_csv",
         default=os.path.join("05_outputs", "features", "features_cyclewise.csv"),
         help="Cyclewise feature output CSV",
@@ -227,6 +244,15 @@ def main():
         action="store_true",
         help="Disable TGO growth eigenstrain for comparison runs",
     )
+    parser.add_argument(
+        "--growth_eigenstrain_coeff",
+        type=float,
+        default=1e-3,
+        help=(
+            "Scale factor for growth eigenstrain: eps_g = coeff * (delta_h / h_initial). "
+            "Keep small (e.g., 1e-3 or 1e-4) to bound prestress."
+        ),
+    )
     args = parser.parse_args()
 
     os.makedirs(args.runs_dir, exist_ok=True)
@@ -240,8 +266,13 @@ def main():
     base_geom = _load_geometry(args.geometry)
 
     k_p = args.k_p if args.k_p is not None else _load_kp(args.bounds)
+    if args.arrhenius_growth:
+        if args.kp0 is None or args.Q is None:
+            raise ValueError("Arrhenius growth requires --kp0 and --Q.")
+        k_p = None
 
     tgo_th = _find_layer_thickness(base_geom["layers"], "tgo")
+    tgo_initial = tgo_th
     ysz_th = _find_layer_thickness(base_geom["layers"], "ysz")
     bond_th = _find_layer_thickness(base_geom["layers"], "bond")
 
@@ -252,10 +283,20 @@ def main():
     feature_rows = []
     tgo_history = []
     for cycle_id in range(1, cycle["n_cycles"] + 1):
+        if args.arrhenius_growth:
+            # Use cycle maximum temperature in Kelvin for Arrhenius k_p.
+            t_max_k = cycle["t_max"] + 273.15
+            k_p_eff = args.kp0 * math.exp(-args.Q / (8.314 * t_max_k))
+        else:
+            k_p_eff = k_p
         # Parabolic growth once per cycle (quasi-static approximation).
-        tgo_next = _growth_update(tgo_th, k_p, dt_cycle)
+        tgo_next = _growth_update(tgo_th, k_p_eff, dt_cycle)
         delta_h = max(0.0, tgo_next - tgo_th)
-        growth_strain = delta_h / max(tgo_th, 1e-12)
+        # Effective eigenstrain uses initial TGO thickness as reference.
+        # delta_h and h_initial are in um, so the ratio is dimensionless.
+        growth_strain = args.growth_eigenstrain_coeff * (
+            delta_h / max(tgo_initial, 1e-12)
+        )
         tgo_th = tgo_next
         tgo_history.append(tgo_th)
 
@@ -280,11 +321,12 @@ def main():
             delta_t = t_val - cycle["t_min"]
             applied_growth = 0.0 if args.disable_growth_strain else growth_strain
             logger.info(
-                "cycle=%s state=%s TGO=%.6f um growth_strain=%.6e",
+                "cycle=%s state=%s TGO=%.6f um growth_strain=%.6e coeff=%.3e",
                 cycle_id,
                 t_state,
                 tgo_th,
                 applied_growth,
+                args.growth_eigenstrain_coeff,
             )
             pb, state, out = solve_delta_t(
                 context, delta_t, growth_strain=applied_growth
@@ -328,10 +370,31 @@ def main():
                     "tgo_thickness_um": tgo_th,
                     "ysz_thickness_um": ysz_th,
                     "bondcoat_thickness_um": bond_th,
-                    "k_p_m2_s": k_p,
+                    "k_p_m2_s": k_p_eff,
                     "growth_strain": applied_growth,
+                    "growth_eigenstrain_coeff": args.growth_eigenstrain_coeff,
+                    "arrhenius_growth": bool(args.arrhenius_growth),
+                    "kp0_m2_s": args.kp0 if args.arrhenius_growth else None,
+                    "Q_J_mol": args.Q if args.arrhenius_growth else None,
                 },
             )
+            max_sigma = features["ysz_tgo_max_sigma_yy"]
+            max_tau = features["ysz_tgo_max_tau_xy"]
+            logger.info(
+                "cycle=%s state=%s TGO=%.6f um delta_h=%.6f um eps_g=%.6e "
+                "max_sigma_yy=%.6e Pa max_tau_xy=%.6e Pa",
+                cycle_id,
+                t_state,
+                tgo_th,
+                delta_h,
+                applied_growth,
+                max_sigma,
+                max_tau,
+            )
+            if max(abs(max_sigma), abs(max_tau)) > 5.0e9:
+                logger.warning(
+                    "Warning: stress exceeds typical TBC material strength range."
+                )
             feature_rows.append(features)
 
     _validate_growth(tgo_history)

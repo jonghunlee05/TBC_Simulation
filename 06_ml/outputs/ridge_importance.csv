@@ -1,5 +1,15 @@
 feature,importance
-delta_t,20197084.867930923
-tgo_thickness_um,7186.2071795059355
+delta_t,20310640.82320067
+E_scale_tgo,9417201.620001106
+alpha_scale_tgo,7569084.6531339865
+alpha_scale_sub,5295581.988934144
+alpha_scale_ysz,3018545.4346461114
+E_scale_ysz,2537702.1973811174
+alpha_scale_bond,1673674.7944130485
+roughness_amplitude_um,1303268.5856732905
+roughness_wavelength_um,927267.5882284692
+tgo_thickness_um,743318.335287372
+E_scale_sub,576204.0177074537
+E_scale_bond,27773.049195144125
 ysz_thickness_um,0.0
 bondcoat_thickness_um,0.0

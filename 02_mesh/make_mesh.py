@@ -58,7 +58,15 @@ def _build_y_coords(ysz, tgo, bond, sub, dy_scale=1.0):
     return np.concatenate(ys)
 
 
-def build_mesh(spec_path, mesh_path, nx=200, dy_scale=1.0):
+def build_mesh(
+    spec_path,
+    mesh_path,
+    nx=200,
+    dy_scale=1.0,
+    enable_roughness=False,
+    roughness_amplitude=0.0,
+    roughness_wavelength=1.0,
+):
     geom = _load_geometry(spec_path)
 
     # Units: micrometers (um)
@@ -73,6 +81,24 @@ def build_mesh(spec_path, mesh_path, nx=200, dy_scale=1.0):
     ys = _build_y_coords(ysz, tgo, bond, sub, dy_scale=dy_scale)
 
     xx, yy = np.meshgrid(xs, ys)
+
+    if enable_roughness and roughness_amplitude != 0.0:
+        # Apply sinusoidal roughness at the YSZ/TGO interface only.
+        # Units: amplitude and wavelength are in um, y-coordinates are in um.
+        # Offset decays linearly to 0 at the top of the YSZ to keep the surface flat.
+        dx = xs[1] - xs[0] if len(xs) > 1 else width
+        min_dy = float(np.min(np.diff(ys))) if len(ys) > 1 else ysz
+        max_amp = 0.25 * min(dx, min_dy, ysz)
+        amp = min(abs(roughness_amplitude), max_amp)
+        if amp <= 0.0:
+            amp = 0.0
+        y_interface = (sub + bond + tgo)
+        k = 2.0 * np.pi / max(roughness_wavelength, 1e-12)
+        offset = amp * np.sin(k * xx) * (1.0 if roughness_amplitude >= 0.0 else -1.0)
+        mask = yy >= y_interface
+        decay = (y_interface + ysz - yy) / max(ysz, 1e-12)
+        yy = np.where(mask, yy + offset * decay, yy)
+
     coors = np.c_[xx.ravel(), yy.ravel()]
 
     # Quad elements
@@ -123,9 +149,34 @@ def main():
         default=1.0,
         help="Scale factor for y-direction spacing",
     )
+    parser.add_argument(
+        "--enable_roughness",
+        action="store_true",
+        help="Enable sinusoidal roughness at YSZ/TGO interface",
+    )
+    parser.add_argument(
+        "--roughness_amplitude",
+        type=float,
+        default=0.0,
+        help="Roughness amplitude (um)",
+    )
+    parser.add_argument(
+        "--roughness_wavelength",
+        type=float,
+        default=10.0,
+        help="Roughness wavelength (um)",
+    )
     args = parser.parse_args()
 
-    build_mesh(args.spec, args.mesh, nx=args.nx, dy_scale=args.dy_scale)
+    build_mesh(
+        args.spec,
+        args.mesh,
+        nx=args.nx,
+        dy_scale=args.dy_scale,
+        enable_roughness=args.enable_roughness,
+        roughness_amplitude=args.roughness_amplitude,
+        roughness_wavelength=args.roughness_wavelength,
+    )
 
 
 if __name__ == "__main__":

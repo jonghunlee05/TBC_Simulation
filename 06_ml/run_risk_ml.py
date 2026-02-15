@@ -58,6 +58,16 @@ def _select_inputs(df):
         "ysz_thickness_um",
         "bondcoat_thickness_um",
         "k_p_m2_s",
+        "alpha_scale_ysz",
+        "alpha_scale_sub",
+        "alpha_scale_bond",
+        "alpha_scale_tgo",
+        "E_scale_ysz",
+        "E_scale_sub",
+        "E_scale_bond",
+        "E_scale_tgo",
+        "roughness_amplitude_um",
+        "roughness_wavelength_um",
     ]
     return [c for c in candidate_inputs if c in df.columns]
 

@@ -32,6 +32,13 @@ Outputs
 - `05_outputs/features/` contains CSVs of interface metrics.
 - `04_runs/thermal_cycles/` stores per-cycle meshes (optional VTK fields if enabled).
 
+Sanity Checks
+- `python 07_sanity_checks/check_magnitudes.py --results_dir 05_outputs/features`
+- `python 07_sanity_checks/check_trends.py --results_dir 05_outputs/features`
+- `python 07_sanity_checks/check_closed_form.py --delta_t 600`
+- `python 07_sanity_checks/check_mesh_sensitivity.py --delta_t 600`
+- `python 07_sanity_checks/run_all.py --delta_t 600 --include_mesh`
+
 Notes
 - `k_p` is in m^2/s and converted to um^2/s internally for geometry updates.
 - Roughness hooks are present but not implemented yet.

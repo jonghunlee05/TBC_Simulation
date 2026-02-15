@@ -7,6 +7,14 @@ bounds:
   k_p: [1.0e-14, 1.0e-11]      # parabolic growth constant (placeholder)
   roughness_amplitude_um: [0.0, 10.0]
   roughness_wavelength_um: [50, 500]
+  alpha_ysz_scale: [0.8, 1.2]
+  alpha_sub_scale: [0.8, 1.2]
+  alpha_bond_scale: [0.8, 1.2]
+  alpha_tgo_scale: [0.8, 1.2]
+  E_ysz_scale: [0.8, 1.2]
+  E_sub_scale: [0.8, 1.2]
+  E_bond_scale: [0.8, 1.2]
+  E_tgo_scale: [0.8, 1.2]
 sampling:
   method: latin_hypercube
   n_samples: 50
