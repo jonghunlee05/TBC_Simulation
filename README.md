@@ -41,6 +41,11 @@ Part I (state drivers, growth disabled):
 - `python part1_state/run_part1_dataset.py --config part1_state/config_part1.yaml`
 - `python 06_ml/run_risk_ml.py --features_dir 05_results/part1_state --include_prefix part1_state_dataset`
 
+Part I (static ranking v2):
+- Wide ΔT sweeps are reserved for verification scaling checks.
+- Narrow ΔT (800–1000 °C) is used in Part I to isolate secondary drivers
+  like CTE and modulus scaling without ΔT dominating the response.
+
 Part II (evolution drivers, growth enabled):
 - `python part2_evolution/run_part2_dataset.py --config part2_evolution/config_part2.yaml`
 - `python part2_evolution/run_part2_ml.py`

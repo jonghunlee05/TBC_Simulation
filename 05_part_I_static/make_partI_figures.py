@@ -97,6 +97,8 @@ def main():
     args = parser.parse_args()
 
     ensure_output_tree()
+    figures_dir = Path("figures")
+    figures_dir.mkdir(parents=True, exist_ok=True)
 
     for csv_path in Path(OAT_DIR).glob("oat_*.csv"):
         _plot_oat(csv_path, OAT_DIR)
@@ -143,13 +145,23 @@ def main():
                 {"target": target, "top1": top3[0], "top2": top3[1], "top3": top3[2]}
             )
 
-        model_path = Path(ML_DIR) / f"{target}_rf_model.joblib"
-        if model_path.exists() and input_cols and len(top3) > 0:
+        model_candidates = sorted(Path(ML_DIR).glob(f"{target}_*_model.joblib"))
+        if model_candidates and input_cols and len(top3) > 0:
+            model_path = model_candidates[0]
             _plot_pdp(
                 model_path,
                 df[input_cols],
                 top3,
                 Path(INTERACTIONS_DIR) / f"{target}_pdp.png",
+                f"PDP: {target}",
+            )
+
+            fig_out = Path(figures_dir) / f"partI_v2_pdp_{target}.png"
+            _plot_pdp(
+                model_path,
+                df[input_cols],
+                top3,
+                fig_out,
                 f"PDP: {target}",
             )
 
@@ -170,6 +182,35 @@ def main():
         fig.tight_layout()
         fig.savefig(Path(SUMMARY_DIR) / "top3_drivers.png", dpi=200)
         plt.close(fig)
+
+    # Check PDP trends for alpha_scale and e_scale
+    trend_rows = []
+    for target in TARGETS:
+        model_candidates = sorted(Path(ML_DIR).glob(f"{target}_*_model.joblib"))
+        if not model_candidates or not input_cols:
+            continue
+        model_path = model_candidates[0]
+        model = joblib.load(model_path)
+        for feature in ("alpha_scale", "e_scale"):
+            if feature not in input_cols:
+                continue
+            fig, ax = plt.subplots(figsize=(5, 3))
+            disp = PartialDependenceDisplay.from_estimator(
+                model, df[input_cols], features=[feature], ax=ax
+            )
+            values = disp.pd_results[0]["average"].ravel()
+            trend_rows.append(
+                {
+                    "target": target,
+                    "feature": feature,
+                    "pdp_range": float(np.nanmax(values) - np.nanmin(values)),
+                }
+            )
+            plt.close(fig)
+    if trend_rows:
+        pd.DataFrame(trend_rows).to_csv(
+            Path(SUMMARY_DIR) / "pdp_trend_check.csv", index=False
+        )
 
 
 if __name__ == "__main__":

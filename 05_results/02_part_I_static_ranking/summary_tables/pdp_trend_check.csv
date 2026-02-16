@@ -1,0 +1,13 @@
+target,feature,pdp_range
+ysz_tgo_max_sigma_yy,alpha_scale,0.0
+ysz_tgo_max_sigma_yy,e_scale,0.0
+ysz_tgo_max_tau_xy,alpha_scale,0.0
+ysz_tgo_max_tau_xy,e_scale,0.0
+ysz_tgo_mean_sed,alpha_scale,0.0
+ysz_tgo_mean_sed,e_scale,0.0
+tgo_bc_max_sigma_yy,alpha_scale,0.0
+tgo_bc_max_sigma_yy,e_scale,0.0
+tgo_bc_max_tau_xy,alpha_scale,0.0
+tgo_bc_max_tau_xy,e_scale,0.0
+tgo_bc_mean_sed,alpha_scale,0.0
+tgo_bc_mean_sed,e_scale,0.0

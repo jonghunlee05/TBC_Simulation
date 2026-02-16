@@ -35,7 +35,7 @@ def main():
         default=os.path.join("00_inputs", "parameters_bounds.yaml"),
         help="Bounds YAML",
     )
-    parser.add_argument("--n_samples", type=int, default=30)
+    parser.add_argument("--n_samples", type=int, default=300)
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--enable_roughness", action="store_true")
     parser.add_argument("--n_select", type=int, default=200)
@@ -43,6 +43,10 @@ def main():
 
     ensure_output_tree()
     bounds = load_yaml(args.bounds)["bounds"]
+    bounds = dict(bounds)
+    bounds["deltaT_C"] = [800.0, 1000.0]
+    bounds["alpha_ysz_scale"] = [0.7, 1.3]
+    bounds["E_ysz_scale"] = [0.7, 1.3]
     rng = np.random.default_rng(args.seed)
 
     inputs = {
