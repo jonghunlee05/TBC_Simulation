@@ -217,7 +217,7 @@ def main():
     )
     parser.add_argument(
         "--output_csv",
-        default=os.path.join("05_outputs", "features", "features_cyclewise.csv"),
+        default=os.path.join("05_results", "features", "features_cyclewise.csv"),
         help="Cyclewise feature output CSV",
     )
     parser.add_argument(
@@ -233,6 +233,23 @@ def main():
     parser.add_argument("--nx", type=int, default=200, help="Number of x divisions")
     parser.add_argument(
         "--dy_scale", type=float, default=1.0, help="Scale factor for y spacing"
+    )
+    parser.add_argument(
+        "--enable_roughness",
+        action="store_true",
+        help="Enable sinusoidal roughness at YSZ/TGO interface",
+    )
+    parser.add_argument(
+        "--roughness_amplitude",
+        type=float,
+        default=0.0,
+        help="Roughness amplitude (um)",
+    )
+    parser.add_argument(
+        "--roughness_wavelength",
+        type=float,
+        default=100.0,
+        help="Roughness wavelength (um)",
     )
     parser.add_argument(
         "--save_fields",
@@ -313,7 +330,15 @@ def main():
         geom_path = os.path.join(cycle_dir, "geometry_spec.yaml")
         mesh_path = os.path.join(cycle_dir, "tbc_2d.mesh")
         _write_geometry(geom, geom_path)
-        build_mesh(geom_path, mesh_path, nx=args.nx, dy_scale=args.dy_scale)
+        build_mesh(
+            geom_path,
+            mesh_path,
+            nx=args.nx,
+            dy_scale=args.dy_scale,
+            enable_roughness=args.enable_roughness,
+            roughness_amplitude=args.roughness_amplitude,
+            roughness_wavelength=args.roughness_wavelength,
+        )
 
         context = build_case_context(geom_path, args.materials, mesh_path)
         for t_state, t_val in (("min", cycle["t_min"]), ("max", cycle["t_max"])):
@@ -376,6 +401,8 @@ def main():
                     "arrhenius_growth": bool(args.arrhenius_growth),
                     "kp0_m2_s": args.kp0 if args.arrhenius_growth else None,
                     "Q_J_mol": args.Q if args.arrhenius_growth else None,
+                    "roughness_amplitude_um": args.roughness_amplitude,
+                    "roughness_wavelength_um": args.roughness_wavelength,
                 },
             )
             max_sigma = features["ysz_tgo_max_sigma_yy"]
@@ -403,7 +430,7 @@ def main():
         for warning in warnings:
             logger.warning("Feature variation check: %s", warning)
     _write_validation_plots(
-        feature_rows, os.path.join("05_outputs", "validation_plots")
+        feature_rows, os.path.join("05_results", "validation_plots")
     )
 
 

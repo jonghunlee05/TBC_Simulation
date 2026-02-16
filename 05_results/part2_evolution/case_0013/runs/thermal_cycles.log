@@ -1,0 +1,56 @@
+2026-02-16 16:47:36,350 | INFO | cycle=1 state=min TGO=73.952427 um growth_strain=6.554644e-02 coeff=1.000e-03
+2026-02-16 16:47:39,666 | INFO | cycle=1 state=min TGO=73.952427 um delta_h=72.841137 um eps_g=6.554644e-02 max_sigma_yy=1.250766e+10 Pa max_tau_xy=1.820187e+10 Pa
+2026-02-16 16:47:39,666 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:47:39,667 | INFO | cycle=1 state=max TGO=73.952427 um growth_strain=6.554644e-02 coeff=1.000e-03
+2026-02-16 16:47:42,868 | INFO | cycle=1 state=max TGO=73.952427 um delta_h=72.841137 um eps_g=6.554644e-02 max_sigma_yy=1.546937e+10 Pa max_tau_xy=1.764187e+10 Pa
+2026-02-16 16:47:42,868 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:47:43,431 | INFO | cycle=2 state=min TGO=104.578621 um growth_strain=2.755913e-02 coeff=1.000e-03
+2026-02-16 16:47:46,863 | INFO | cycle=2 state=min TGO=104.578621 um delta_h=30.626194 um eps_g=2.755913e-02 max_sigma_yy=5.704291e+09 Pa max_tau_xy=8.394226e+09 Pa
+2026-02-16 16:47:46,864 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:47:46,864 | INFO | cycle=2 state=max TGO=104.578621 um growth_strain=2.755913e-02 coeff=1.000e-03
+2026-02-16 16:47:49,986 | INFO | cycle=2 state=max TGO=104.578621 um delta_h=30.626194 um eps_g=2.755913e-02 max_sigma_yy=8.655324e+09 Pa max_tau_xy=7.787674e+09 Pa
+2026-02-16 16:47:49,986 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:47:50,585 | INFO | cycle=3 state=min TGO=128.079719 um growth_strain=2.114758e-02 coeff=1.000e-03
+2026-02-16 16:47:53,721 | INFO | cycle=3 state=min TGO=128.079719 um delta_h=23.501098 um eps_g=2.114758e-02 max_sigma_yy=4.267857e+09 Pa max_tau_xy=6.267535e+09 Pa
+2026-02-16 16:47:53,721 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:47:53,722 | INFO | cycle=3 state=max TGO=128.079719 um growth_strain=2.114758e-02 coeff=1.000e-03
+2026-02-16 16:47:56,712 | INFO | cycle=3 state=max TGO=128.079719 um delta_h=23.501098 um eps_g=2.114758e-02 max_sigma_yy=7.249768e+09 Pa max_tau_xy=5.685835e+09 Pa
+2026-02-16 16:47:56,712 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:47:57,259 | INFO | cycle=4 state=min TGO=147.892329 um growth_strain=1.782847e-02 coeff=1.000e-03
+2026-02-16 16:48:00,677 | INFO | cycle=4 state=min TGO=147.892329 um delta_h=19.812610 um eps_g=1.782847e-02 max_sigma_yy=4.026283e+09 Pa max_tau_xy=5.995375e+09 Pa
+2026-02-16 16:48:00,677 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:00,677 | INFO | cycle=4 state=max TGO=147.892329 um growth_strain=1.782847e-02 coeff=1.000e-03
+2026-02-16 16:48:03,792 | INFO | cycle=4 state=max TGO=147.892329 um delta_h=19.812610 um eps_g=1.782847e-02 max_sigma_yy=6.972579e+09 Pa max_tau_xy=5.335118e+09 Pa
+2026-02-16 16:48:03,792 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:04,376 | INFO | cycle=5 state=min TGO=165.347717 um growth_strain=1.570731e-02 coeff=1.000e-03
+2026-02-16 16:48:07,822 | INFO | cycle=5 state=min TGO=165.347717 um delta_h=17.455388 um eps_g=1.570731e-02 max_sigma_yy=3.654985e+09 Pa max_tau_xy=5.456017e+09 Pa
+2026-02-16 16:48:07,823 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:07,824 | INFO | cycle=5 state=max TGO=165.347717 um growth_strain=1.570731e-02 coeff=1.000e-03
+2026-02-16 16:48:11,360 | INFO | cycle=5 state=max TGO=165.347717 um delta_h=17.455388 um eps_g=1.570731e-02 max_sigma_yy=6.600311e+09 Pa max_tau_xy=4.777385e+09 Pa
+2026-02-16 16:48:11,360 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:11,931 | INFO | cycle=6 state=min TGO=181.128667 um growth_strain=1.420056e-02 coeff=1.000e-03
+2026-02-16 16:48:15,458 | INFO | cycle=6 state=min TGO=181.128667 um delta_h=15.780950 um eps_g=1.420056e-02 max_sigma_yy=3.388741e+09 Pa max_tau_xy=5.064988e+09 Pa
+2026-02-16 16:48:15,458 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:15,459 | INFO | cycle=6 state=max TGO=181.128667 um growth_strain=1.420056e-02 coeff=1.000e-03
+2026-02-16 16:48:18,805 | INFO | cycle=6 state=max TGO=181.128667 um delta_h=15.780950 um eps_g=1.420056e-02 max_sigma_yy=6.333278e+09 Pa max_tau_xy=4.371064e+09 Pa
+2026-02-16 16:48:18,805 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:19,385 | INFO | cycle=7 state=min TGO=195.640795 um growth_strain=1.305881e-02 coeff=1.000e-03
+2026-02-16 16:48:22,946 | INFO | cycle=7 state=min TGO=195.640795 um delta_h=14.512128 um eps_g=1.305881e-02 max_sigma_yy=2.881419e+09 Pa max_tau_xy=4.349527e+09 Pa
+2026-02-16 16:48:22,947 | INFO | cycle=7 state=max TGO=195.640795 um growth_strain=1.305881e-02 coeff=1.000e-03
+2026-02-16 16:48:26,203 | INFO | cycle=7 state=max TGO=195.640795 um delta_h=14.512128 um eps_g=1.305881e-02 max_sigma_yy=5.874120e+09 Pa max_tau_xy=3.709471e+09 Pa
+2026-02-16 16:48:26,204 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:26,819 | INFO | cycle=8 state=min TGO=209.148385 um growth_strain=1.215487e-02 coeff=1.000e-03
+2026-02-16 16:48:30,409 | INFO | cycle=8 state=min TGO=209.148385 um delta_h=13.507591 um eps_g=1.215487e-02 max_sigma_yy=3.022711e+09 Pa max_tau_xy=4.519521e+09 Pa
+2026-02-16 16:48:30,409 | INFO | cycle=8 state=max TGO=209.148385 um growth_strain=1.215487e-02 coeff=1.000e-03
+2026-02-16 16:48:33,503 | INFO | cycle=8 state=max TGO=209.148385 um delta_h=13.507591 um eps_g=1.215487e-02 max_sigma_yy=5.965762e+09 Pa max_tau_xy=3.801072e+09 Pa
+2026-02-16 16:48:33,503 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:34,052 | INFO | cycle=9 state=min TGO=221.835014 um growth_strain=1.141612e-02 coeff=1.000e-03
+2026-02-16 16:48:37,243 | INFO | cycle=9 state=min TGO=221.835014 um delta_h=12.686629 um eps_g=1.141612e-02 max_sigma_yy=2.595699e+09 Pa max_tau_xy=3.940233e+09 Pa
+2026-02-16 16:48:37,243 | INFO | cycle=9 state=max TGO=221.835014 um growth_strain=1.141612e-02 coeff=1.000e-03
+2026-02-16 16:48:40,325 | INFO | cycle=9 state=max TGO=221.835014 um delta_h=12.686629 um eps_g=1.141612e-02 max_sigma_yy=5.591560e+09 Pa max_tau_xy=3.281403e+09 Pa
+2026-02-16 16:48:40,325 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:48:40,939 | INFO | cycle=10 state=min TGO=233.834343 um growth_strain=1.079765e-02 coeff=1.000e-03
+2026-02-16 16:48:44,177 | INFO | cycle=10 state=min TGO=233.834343 um delta_h=11.999329 um eps_g=1.079765e-02 max_sigma_yy=2.776021e+09 Pa max_tau_xy=4.145421e+09 Pa
+2026-02-16 16:48:44,177 | INFO | cycle=10 state=max TGO=233.834343 um growth_strain=1.079765e-02 coeff=1.000e-03
+2026-02-16 16:48:47,335 | INFO | cycle=10 state=max TGO=233.834343 um delta_h=11.999329 um eps_g=1.079765e-02 max_sigma_yy=5.717486e+09 Pa max_tau_xy=3.407697e+09 Pa
+2026-02-16 16:48:47,336 | WARNING | Warning: stress exceeds typical TBC material strength range.

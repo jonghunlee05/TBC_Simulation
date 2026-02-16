@@ -33,12 +33,12 @@ def main():
     )
     parser.add_argument(
         "--output_csv",
-        default=os.path.join("05_outputs", "features", "sensitivity_deltaT.csv"),
+        default=os.path.join("05_results", "features", "sensitivity_deltaT.csv"),
         help="CSV output path for interface features",
     )
     parser.add_argument(
         "--fields_dir",
-        default=os.path.join("05_outputs", "fields"),
+        default=os.path.join("05_results", "fields"),
         help="Directory for VTK field outputs",
     )
     parser.add_argument(
@@ -46,6 +46,12 @@ def main():
         type=int,
         default=200,
         help="Number of elements nearest each interface to sample",
+    )
+    parser.add_argument(
+        "--bc_variant",
+        choices=["fixed", "free_edge"],
+        default="fixed",
+        help="Boundary condition variant for the solve",
     )
     parser.add_argument(
         "--alpha_scale_ysz",
@@ -115,7 +121,7 @@ def main():
     context = build_case_context(args.geometry, args.materials, args.mesh)
     dT_values = args.delta_t or [600.0, 750.0, 900.0, 1050.0]
     for dT in dT_values:
-        pb, state, out = solve_delta_t(context, dT)
+        pb, state, out = solve_delta_t(context, dT, bc_variant=args.bc_variant)
         tgo_th = context["tgo_th"]
         ysz_th = context["ysz_th"]
         bond_th = context["bond_th"]
@@ -127,6 +133,7 @@ def main():
             "tgo_thickness_um": tgo_th,
             "ysz_thickness_um": ysz_th,
             "bondcoat_thickness_um": bond_th,
+            "bc_variant": args.bc_variant,
         }
         if args.alpha_scale_ysz is not None:
             extra_fields["alpha_scale_ysz"] = args.alpha_scale_ysz

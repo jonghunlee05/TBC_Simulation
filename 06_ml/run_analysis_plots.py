@@ -95,22 +95,22 @@ def main():
     parser = argparse.ArgumentParser(description="Generate dissertation plots.")
     parser.add_argument(
         "--features_dir",
-        default=os.path.join("05_outputs", "features"),
+        default=os.path.join("05_results", "features"),
         help="Directory containing feature CSVs",
     )
     parser.add_argument(
         "--ml_dir",
-        default=os.path.join("06_ml", "outputs"),
+        default=os.path.join("05_results", "ml_outputs"),
         help="Directory with ML outputs",
     )
     parser.add_argument(
         "--out_dir",
-        default=os.path.join("06_ml", "outputs", "figures"),
+        default=os.path.join("05_results", "ml_outputs", "figures"),
         help="Directory to store figures",
     )
     parser.add_argument(
         "--lhs_csv",
-        default=os.path.join("05_outputs", "features", "sweep_dataset_lhs_final.csv"),
+        default=os.path.join("05_results", "features", "sweep_dataset_lhs_final.csv"),
         help="LHS sweep CSV for interaction plot",
     )
     args = parser.parse_args()

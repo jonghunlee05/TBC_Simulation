@@ -62,7 +62,7 @@ def main():
     )
     parser.add_argument(
         "--output_csv",
-        default=os.path.join("05_outputs", "features", "mesh_convergence.csv"),
+        default=os.path.join("05_results", "features", "mesh_convergence.csv"),
         help="Output CSV path",
     )
     parser.add_argument(

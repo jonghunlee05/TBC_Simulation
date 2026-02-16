@@ -162,12 +162,12 @@ def main():
     parser = argparse.ArgumentParser(description="Risk proxy + ML analysis.")
     parser.add_argument(
         "--features_dir",
-        default=os.path.join("05_outputs", "features"),
+        default=os.path.join("05_results", "features"),
         help="Directory containing feature CSVs",
     )
     parser.add_argument(
         "--output_dir",
-        default=os.path.join("06_ml", "outputs"),
+        default=os.path.join("05_results", "ml_outputs"),
         help="Directory for analysis outputs",
     )
     parser.add_argument(

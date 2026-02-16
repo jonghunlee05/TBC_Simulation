@@ -131,6 +131,9 @@ def build_case_context(geometry_path, materials_path, mesh_path, tol=1e-3):
         "left": domain.create_region("Left", "vertices in x < 1e-6", "facet"),
         "right": domain.create_region("Right", f"vertices in x > {width - 1e-6}", "facet"),
         "bottom": domain.create_region("Bottom", "vertices in y < 1e-6", "facet"),
+        "origin": domain.create_region(
+            "Origin", "vertices in (x < 1e-6) & (y < 1e-6)", "vertex"
+        ),
     }
 
     field = Field.from_args("displacement", np.float64, "vector", omega, approx_order=1)
@@ -182,13 +185,17 @@ def build_case_context(geometry_path, materials_path, mesh_path, tol=1e-3):
     }
 
 
-def solve_delta_t(context, dT, growth_strain=0.0):
+def solve_delta_t(context, dT, growth_strain=0.0, bc_variant="fixed"):
     """
     Solve a uniform temperature step with optional TGO growth eigenstrain.
 
     Growth strain is treated as an isotropic eigenstrain in the TGO. This is a
     first-order approximation that captures volumetric expansion due to oxidation
     without modeling full inelasticity or damage.
+
+    Boundary condition variants:
+    - "fixed": left edge u_x=0 and bottom edge u_y=0 (default)
+    - "free_edge": only pin the origin to remove rigid body motion
     """
     regions = context["regions"]
     u = context["u"]
@@ -312,9 +319,16 @@ def solve_delta_t(context, dT, growth_strain=0.0):
 
     bc_bottom = EssentialBC("bc_bottom", context["boundaries"]["bottom"], {"u.1": 0.0})
     bc_left = EssentialBC("bc_left", context["boundaries"]["left"], {"u.0": 0.0})
+    bc_origin = EssentialBC(
+        "bc_origin", context["boundaries"]["origin"], {"u.0": 0.0, "u.1": 0.0}
+    )
 
     pb = Problem(f"tbc_thermoelastic_snapshot_dT_{int(dT)}", equations=eqs)
-    pb.time_update(ebcs=Conditions([bc_bottom, bc_left]))
+    if bc_variant == "free_edge":
+        ebcs = Conditions([bc_origin])
+    else:
+        ebcs = Conditions([bc_bottom, bc_left])
+    pb.time_update(ebcs=ebcs)
     pb.set_solver(Newton({}, lin_solver=ScipyDirect({})))
     state = pb.solve()
 

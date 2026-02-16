@@ -216,7 +216,7 @@ def main():
     )
     parser.add_argument(
         "--output_csv",
-        default=os.path.join("05_outputs", "features", "sweep_dataset.csv"),
+        default=os.path.join("05_results", "features", "sweep_dataset.csv"),
         help="Output dataset CSV",
     )
     parser.add_argument(

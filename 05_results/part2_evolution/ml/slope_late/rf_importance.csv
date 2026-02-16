@@ -1,0 +1,11 @@
+feature,importance
+delta_t,0.39620396542456277
+t_max_C,0.32949958867636886
+initial_tgo_thickness_um,0.08179875821336303
+roughness_amplitude_um,0.07425526335816839
+roughness_wavelength_um,0.06567266508261366
+cycle_dt_s,0.05256975924492342
+k_p_m2_s,0.0
+t_min_C,0.0
+n_cycles,0.0
+growth_eigenstrain_coeff,0.0

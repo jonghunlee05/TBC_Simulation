@@ -1,0 +1,41 @@
+2026-02-16 16:49:57,469 | INFO | cycle=1 state=min TGO=58.991790 um growth_strain=1.139125e-02 coeff=1.000e-03
+2026-02-16 16:50:00,697 | INFO | cycle=1 state=min TGO=58.991790 um delta_h=54.231026 um eps_g=1.139125e-02 max_sigma_yy=2.068396e+09 Pa max_tau_xy=3.002651e+09 Pa
+2026-02-16 16:50:00,697 | INFO | cycle=1 state=max TGO=58.991790 um growth_strain=1.139125e-02 coeff=1.000e-03
+2026-02-16 16:50:03,859 | INFO | cycle=1 state=max TGO=58.991790 um delta_h=54.231026 um eps_g=1.139125e-02 max_sigma_yy=5.352643e+09 Pa max_tau_xy=2.411291e+09 Pa
+2026-02-16 16:50:03,860 | WARNING | Warning: stress exceeds typical TBC material strength range.
+2026-02-16 16:50:04,401 | INFO | cycle=2 state=min TGO=83.291042 um growth_strain=5.104066e-03 coeff=1.000e-03
+2026-02-16 16:50:07,622 | INFO | cycle=2 state=min TGO=83.291042 um delta_h=24.299252 um eps_g=5.104066e-03 max_sigma_yy=1.003827e+09 Pa max_tau_xy=1.464298e+09 Pa
+2026-02-16 16:50:07,623 | INFO | cycle=2 state=max TGO=83.291042 um growth_strain=5.104066e-03 coeff=1.000e-03
+2026-02-16 16:50:10,682 | INFO | cycle=2 state=max TGO=83.291042 um delta_h=24.299252 um eps_g=5.104066e-03 max_sigma_yy=4.269650e+09 Pa max_tau_xy=8.281078e+08 Pa
+2026-02-16 16:50:11,270 | INFO | cycle=3 state=min TGO=101.954716 um growth_strain=3.920311e-03 coeff=1.000e-03
+2026-02-16 16:50:14,497 | INFO | cycle=3 state=min TGO=101.954716 um delta_h=18.663674 um eps_g=3.920311e-03 max_sigma_yy=8.085852e+08 Pa max_tau_xy=1.187571e+09 Pa
+2026-02-16 16:50:14,497 | INFO | cycle=3 state=max TGO=101.954716 um growth_strain=3.920311e-03 coeff=1.000e-03
+2026-02-16 16:50:17,593 | INFO | cycle=3 state=max TGO=101.954716 um delta_h=18.663674 um eps_g=3.920311e-03 max_sigma_yy=4.081702e+09 Pa max_tau_xy=5.207632e+08 Pa
+2026-02-16 16:50:18,142 | INFO | cycle=4 state=min TGO=117.695074 um growth_strain=3.306268e-03 coeff=1.000e-03
+2026-02-16 16:50:21,353 | INFO | cycle=4 state=min TGO=117.695074 um delta_h=15.740358 um eps_g=3.306268e-03 max_sigma_yy=7.061612e+08 Pa max_tau_xy=1.042564e+09 Pa
+2026-02-16 16:50:21,353 | INFO | cycle=4 state=max TGO=117.695074 um growth_strain=3.306268e-03 coeff=1.000e-03
+2026-02-16 16:50:24,490 | INFO | cycle=4 state=max TGO=117.695074 um delta_h=15.740358 um eps_g=3.306268e-03 max_sigma_yy=4.073604e+09 Pa max_tau_xy=3.523039e+08 Pa
+2026-02-16 16:50:25,030 | INFO | cycle=5 state=min TGO=131.565561 um growth_strain=2.913501e-03 coeff=1.000e-03
+2026-02-16 16:50:28,288 | INFO | cycle=5 state=min TGO=131.565561 um delta_h=13.870487 um eps_g=2.913501e-03 max_sigma_yy=6.399131e+08 Pa max_tau_xy=9.483178e+08 Pa
+2026-02-16 16:50:28,288 | INFO | cycle=5 state=max TGO=131.565561 um growth_strain=2.913501e-03 coeff=1.000e-03
+2026-02-16 16:50:31,420 | INFO | cycle=5 state=max TGO=131.565561 um delta_h=13.870487 um eps_g=2.913501e-03 max_sigma_yy=4.068556e+09 Pa max_tau_xy=2.982717e+08 Pa
+2026-02-16 16:50:31,974 | INFO | cycle=6 state=min TGO=144.107124 um growth_strain=2.634360e-03 coeff=1.000e-03
+2026-02-16 16:50:35,042 | INFO | cycle=6 state=min TGO=144.107124 um delta_h=12.541563 um eps_g=2.634360e-03 max_sigma_yy=5.455789e+08 Pa max_tau_xy=8.071035e+08 Pa
+2026-02-16 16:50:35,043 | INFO | cycle=6 state=max TGO=144.107124 um growth_strain=2.634360e-03 coeff=1.000e-03
+2026-02-16 16:50:37,993 | INFO | cycle=6 state=max TGO=144.107124 um delta_h=12.541563 um eps_g=2.634360e-03 max_sigma_yy=4.063778e+09 Pa max_tau_xy=2.857720e+08 Pa
+2026-02-16 16:50:38,537 | INFO | cycle=7 state=min TGO=155.641350 um growth_strain=2.422768e-03 coeff=1.000e-03
+2026-02-16 16:50:41,616 | INFO | cycle=7 state=min TGO=155.641350 um delta_h=11.534225 um eps_g=2.422768e-03 max_sigma_yy=5.097291e+08 Pa max_tau_xy=7.580129e+08 Pa
+2026-02-16 16:50:41,616 | INFO | cycle=7 state=max TGO=155.641350 um growth_strain=2.422768e-03 coeff=1.000e-03
+2026-02-16 16:50:44,579 | INFO | cycle=7 state=max TGO=155.641350 um delta_h=11.534225 um eps_g=2.422768e-03 max_sigma_yy=4.060892e+09 Pa max_tau_xy=2.760610e+08 Pa
+2026-02-16 16:50:45,173 | INFO | cycle=8 state=min TGO=166.377872 um growth_strain=2.255210e-03 coeff=1.000e-03
+2026-02-16 16:50:48,464 | INFO | cycle=8 state=min TGO=166.377872 um delta_h=10.736522 um eps_g=2.255210e-03 max_sigma_yy=5.269447e+08 Pa max_tau_xy=7.854501e+08 Pa
+2026-02-16 16:50:48,464 | INFO | cycle=8 state=max TGO=166.377872 um growth_strain=2.255210e-03 coeff=1.000e-03
+2026-02-16 16:50:51,569 | INFO | cycle=8 state=max TGO=166.377872 um delta_h=10.736522 um eps_g=2.255210e-03 max_sigma_yy=4.059444e+09 Pa max_tau_xy=2.683556e+08 Pa
+2026-02-16 16:50:52,115 | INFO | cycle=9 state=min TGO=176.462354 um growth_strain=2.118249e-03 coeff=1.000e-03
+2026-02-16 16:50:55,325 | INFO | cycle=9 state=min TGO=176.462354 um delta_h=10.084483 um eps_g=2.118249e-03 max_sigma_yy=5.030302e+08 Pa max_tau_xy=7.504094e+08 Pa
+2026-02-16 16:50:55,325 | INFO | cycle=9 state=max TGO=176.462354 um growth_strain=2.118249e-03 coeff=1.000e-03
+2026-02-16 16:50:58,401 | INFO | cycle=9 state=max TGO=176.462354 um delta_h=10.084483 um eps_g=2.118249e-03 max_sigma_yy=4.057551e+09 Pa max_tau_xy=2.620530e+08 Pa
+2026-02-16 16:50:59,001 | INFO | cycle=10 state=min TGO=186.000884 um growth_strain=2.003571e-03 coeff=1.000e-03
+2026-02-16 16:51:02,230 | INFO | cycle=10 state=min TGO=186.000884 um delta_h=9.538530 um eps_g=2.003571e-03 max_sigma_yy=4.828676e+08 Pa max_tau_xy=7.206588e+08 Pa
+2026-02-16 16:51:02,230 | INFO | cycle=10 state=max TGO=186.000884 um growth_strain=2.003571e-03 coeff=1.000e-03
+2026-02-16 16:51:05,298 | INFO | cycle=10 state=max TGO=186.000884 um delta_h=9.538530 um eps_g=2.003571e-03 max_sigma_yy=4.056033e+09 Pa max_tau_xy=2.573509e+08 Pa
