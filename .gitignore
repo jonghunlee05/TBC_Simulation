@@ -10,3 +10,7 @@ __pycache__/
 04_runs/
 sanity_check/
 **/*case*/
+05_results/part2_evolution/
+05_results/part1_state/cases/
+05_results/01_verification/
+05_results/fields_sanity_low_dt/
