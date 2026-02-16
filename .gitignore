@@ -9,3 +9,4 @@ __pycache__/
 *.vtk
 04_runs/
 sanity_check/
+**/*case*/
