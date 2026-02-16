@@ -14,7 +14,7 @@ from extract_features import extract_features
 from utils import (
     ensure_dir,
     linear_scaling_check,
-    plot_metrics,
+    plot_metrics_triplet,
     run_single_case,
     save_csv,
     scale_materials_alpha,
@@ -41,6 +41,8 @@ def main():
 
     delta_alpha_vals = []
     sigma_vals = []
+    tau_vals = []
+    sed_vals = []
     rows = []
     for scale in scale_factors:
         mats_path = os.path.join(out_dir, f"materials_alphaScale_{scale:.2f}.yaml")
@@ -58,6 +60,8 @@ def main():
         )
         delta_alpha_vals.append(delta_alpha)
         sigma_vals.append(max_sigma)
+        tau_vals.append(max_tau)
+        sed_vals.append(mean_sed)
         rows.append(
             {
                 "alpha_scale_ysz": scale,
@@ -69,12 +73,12 @@ def main():
         )
 
     save_csv(rows, os.path.join(out_dir, "cte_scaling_results.csv"))
-    plot_metrics(
+    plot_metrics_triplet(
         delta_alpha_vals,
-        [sigma_vals],
-        ["max_sigma_yy"],
-        "delta_alpha",
-        "max_sigma_yy",
+        [(sigma_vals, "max")],
+        [(tau_vals, "max")],
+        [(sed_vals, "mean")],
+        "delta_alpha (1/K)",
         "CTE Scaling",
         os.path.join(out_dir, "cte_scaling_plot.png"),
     )

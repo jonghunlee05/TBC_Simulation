@@ -1,5 +1,0 @@
-R_final: RF R2=0.603, MAE=1.506e+07
-R_max: RF R2=-20.139, MAE=1.246e+08
-slope_early: RF R2=-84.760, MAE=5.734e+07
-slope_late: RF R2=0.906, MAE=1.353e+06
-n_star: RF R2=1.000, MAE=0.000e+00

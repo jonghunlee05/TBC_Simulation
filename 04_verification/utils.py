@@ -50,24 +50,150 @@ def extract_metrics(features):
     return max_sigma, max_tau, mean_sed
 
 
+def _evaluate_region_stress_strain(pb, region, lam, mu, out_stress, out_strain):
+    if region.cells.shape[0] == 0:
+        return
+
+    strain = pb.evaluate(
+        f"ev_cauchy_strain.2.{region.name}(u)",
+        mode="el_avg",
+        verbose=False,
+    )
+
+    # Shapes are (n_el, 1, 3, 1) -> squeeze to (n_el, 3)
+    strain = np.asarray(strain)[:, 0, :, 0]
+
+    # Plane strain isotropic stress from strain.
+    exx = strain[:, 0]
+    eyy = strain[:, 1]
+    exy = strain[:, 2]
+    sxx = (lam + 2.0 * mu) * exx + lam * eyy
+    syy = lam * exx + (lam + 2.0 * mu) * eyy
+    sxy = 2.0 * mu * exy
+    stress = np.column_stack([sxx, syy, sxy])
+
+    out_stress[region.cells] = stress
+    out_strain[region.cells] = strain
+
+
+def _nearest_element_indices(y_centroids, y_interface, n_select):
+    n_select = min(n_select, y_centroids.shape[0])
+    dist = np.abs(y_centroids - y_interface)
+    return np.argsort(dist)[:n_select]
+
+
+def compute_interface_samples(pb, regions, materials, y2, y3, n_select=200):
+    mesh = pb.domain.mesh
+    n_cells = mesh.n_el
+
+    stress = np.full((n_cells, 3), np.nan, dtype=np.float64)
+    strain = np.full((n_cells, 3), np.nan, dtype=np.float64)
+
+    _evaluate_region_stress_strain(
+        pb,
+        regions["substrate"],
+        materials["substrate"]["lam"],
+        materials["substrate"]["mu"],
+        stress,
+        strain,
+    )
+    _evaluate_region_stress_strain(
+        pb,
+        regions["bondcoat"],
+        materials["bondcoat"]["lam"],
+        materials["bondcoat"]["mu"],
+        stress,
+        strain,
+    )
+    _evaluate_region_stress_strain(
+        pb,
+        regions["tgo"],
+        materials["tgo"]["lam"],
+        materials["tgo"]["mu"],
+        stress,
+        strain,
+    )
+    _evaluate_region_stress_strain(
+        pb,
+        regions["ysz"],
+        materials["ysz"]["lam"],
+        materials["ysz"]["mu"],
+        stress,
+        strain,
+    )
+
+    sigma_yy = stress[:, 1]
+    tau_xy = stress[:, 2]
+    sed = 0.5 * (
+        stress[:, 0] * strain[:, 0]
+        + stress[:, 1] * strain[:, 1]
+        + 2.0 * stress[:, 2] * strain[:, 2]
+    )
+
+    conn = mesh.get_conn(mesh.descs[0])
+    centroids = mesh.coors[conn].mean(axis=1)
+    y_centroids = centroids[:, 1]
+    idx_ysz_tgo = _nearest_element_indices(y_centroids, y3, n_select)
+    idx_tgo_bc = _nearest_element_indices(y_centroids, y2, n_select)
+
+    return {
+        "ysz_tgo": {
+            "sigma_yy": sigma_yy[idx_ysz_tgo],
+            "tau_xy": tau_xy[idx_ysz_tgo],
+            "sed": sed[idx_ysz_tgo],
+        },
+        "tgo_bc": {
+            "sigma_yy": sigma_yy[idx_tgo_bc],
+            "tau_xy": tau_xy[idx_tgo_bc],
+            "sed": sed[idx_tgo_bc],
+        },
+    }
+
+
 def save_csv(rows, csv_path):
     df = pd.DataFrame(rows)
     df.to_csv(csv_path, index=False)
     return df
 
 
-def plot_metrics(x, ys, labels, xlabel, ylabel, title, out_path):
-    plt.figure()
-    for y, label in zip(ys, labels):
-        plt.plot(x, y, marker="o", label=label)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.title(title)
-    if labels:
-        plt.legend()
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=200)
-    plt.close()
+def plot_metrics_triplet(
+    x,
+    sigma_series,
+    tau_series,
+    sed_series,
+    xlabel,
+    title,
+    out_path,
+    invert_x=False,
+):
+    fig, axes = plt.subplots(3, 1, sharex=True, figsize=(6, 9))
+
+    for y, label in sigma_series:
+        axes[0].plot(x, y, marker="o", label=label)
+    axes[0].set_ylabel("sigma_yy (Pa)")
+    if sigma_series:
+        axes[0].legend()
+
+    for y, label in tau_series:
+        axes[1].plot(x, y, marker="o", label=label)
+    axes[1].set_ylabel("|tau_xy| (Pa)")
+    if tau_series:
+        axes[1].legend()
+
+    for y, label in sed_series:
+        axes[2].plot(x, y, marker="o", label=label)
+    axes[2].set_ylabel("mean SED (J/m^3)")
+    if sed_series:
+        axes[2].legend()
+
+    axes[2].set_xlabel(xlabel)
+    fig.suptitle(title)
+    if invert_x:
+        for ax in axes:
+            ax.invert_xaxis()
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
 
 
 def is_monotonic_non_decreasing(values, tol=1e-9):

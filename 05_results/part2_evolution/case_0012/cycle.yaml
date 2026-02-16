@@ -1,7 +1,0 @@
-thermal_cycle:
-  T_min_C: 25.0
-  T_max_C: 1112.9541259213179
-  heating_time_s: 300.0
-  cooling_time_s: 300.0
-  hold_time_s: 947.7223568101977
-  n_cycles: 10

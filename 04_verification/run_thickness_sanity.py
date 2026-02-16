@@ -13,7 +13,7 @@ from thermoelastic_solver import build_case_context, solve_delta_t
 from extract_features import extract_features
 from utils import (
     ensure_dir,
-    plot_metrics,
+    plot_metrics_triplet,
     run_single_case,
     save_csv,
     update_tgo_thickness,
@@ -28,9 +28,11 @@ def main():
     out_dir = os.path.join("05_results", "01_verification", "thickness_sanity")
     ensure_dir(out_dir)
 
-    tgo_values = [0.5, 1.0, 2.0, 4.0, 6.0]
+    tgo_values = [0.5, 1.0, 2.0, 4.0, 4.5, 5.0, 5.5, 6.0]
 
     sigma_vals = []
+    tau_vals = []
+    sed_vals = []
     rows = []
     for tgo_th in tgo_values:
         geom_path = os.path.join(out_dir, f"geometry_tgo_{tgo_th:.2f}.yaml")
@@ -48,6 +50,8 @@ def main():
             extract_features,
         )
         sigma_vals.append(max_sigma)
+        tau_vals.append(max_tau)
+        sed_vals.append(mean_sed)
         rows.append(
             {
                 "tgo_thickness_um": tgo_th,
@@ -57,15 +61,15 @@ def main():
             }
         )
 
-    save_csv(rows, os.path.join(out_dir, "thickness_sanity_results.csv"))
-    plot_metrics(
+    save_csv(rows, os.path.join(out_dir, "thickness_sanity_results_refined.csv"))
+    plot_metrics_triplet(
         tgo_values,
-        [sigma_vals],
-        ["max_sigma_yy"],
-        "tgo_thickness_um",
-        "max_sigma_yy",
+        [(sigma_vals, "max")],
+        [(tau_vals, "max")],
+        [(sed_vals, "mean")],
+        "TGO thickness (um)",
         "TGO Thickness Sanity",
-        os.path.join(out_dir, "thickness_sanity_plot.png"),
+        os.path.join(out_dir, "thickness_sanity_plot_refined.png"),
     )
 
     monotonic = np.all(np.diff(sigma_vals) >= 0.0)

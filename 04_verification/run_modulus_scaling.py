@@ -14,7 +14,7 @@ from extract_features import extract_features
 from utils import (
     ensure_dir,
     linear_scaling_check,
-    plot_metrics,
+    plot_metrics_triplet,
     run_single_case,
     save_csv,
     scale_materials_E,
@@ -35,6 +35,8 @@ def main():
     build_mesh(geometry, mesh_path, nx=200, dy_scale=1.0)
 
     sigma_vals = []
+    tau_vals = []
+    sed_vals = []
     rows = []
     for scale in scale_factors:
         mats_path = os.path.join(out_dir, f"materials_Escale_{scale:.2f}.yaml")
@@ -49,6 +51,8 @@ def main():
             extract_features,
         )
         sigma_vals.append(max_sigma)
+        tau_vals.append(max_tau)
+        sed_vals.append(mean_sed)
         rows.append(
             {
                 "E_scale": scale,
@@ -59,12 +63,12 @@ def main():
         )
 
     save_csv(rows, os.path.join(out_dir, "modulus_scaling_results.csv"))
-    plot_metrics(
+    plot_metrics_triplet(
         scale_factors,
-        [sigma_vals],
-        ["max_sigma_yy"],
-        "E_scale",
-        "max_sigma_yy",
+        [(sigma_vals, "max")],
+        [(tau_vals, "max")],
+        [(sed_vals, "mean")],
+        "E scale (-)",
         "Modulus Scaling",
         os.path.join(out_dir, "modulus_scaling_plot.png"),
     )

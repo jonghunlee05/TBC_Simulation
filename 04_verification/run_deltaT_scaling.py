@@ -11,7 +11,13 @@ sys.path.append(str(repo_root / "03_solver"))
 from make_mesh import build_mesh
 from thermoelastic_solver import build_case_context, solve_delta_t
 from extract_features import extract_features
-from utils import ensure_dir, linear_scaling_check, plot_metrics, run_single_case, save_csv
+from utils import (
+    ensure_dir,
+    linear_scaling_check,
+    plot_metrics_triplet,
+    run_single_case,
+    save_csv,
+)
 
 
 def main():
@@ -27,6 +33,8 @@ def main():
     build_mesh(geometry, mesh_path, nx=200, dy_scale=1.0)
 
     sigma_vals = []
+    tau_vals = []
+    sed_vals = []
     rows = []
     for dT in dt_values:
         max_sigma, max_tau, mean_sed = run_single_case(
@@ -39,6 +47,8 @@ def main():
             extract_features,
         )
         sigma_vals.append(max_sigma)
+        tau_vals.append(max_tau)
+        sed_vals.append(mean_sed)
         rows.append(
             {
                 "delta_t": dT,
@@ -49,12 +59,12 @@ def main():
         )
 
     save_csv(rows, os.path.join(out_dir, "deltaT_scaling_results.csv"))
-    plot_metrics(
+    plot_metrics_triplet(
         dt_values,
-        [sigma_vals],
-        ["max_sigma_yy"],
-        "delta_t",
-        "max_sigma_yy",
+        [(sigma_vals, "max")],
+        [(tau_vals, "max")],
+        [(sed_vals, "mean")],
+        "delta_T (C)",
         "DeltaT Scaling",
         os.path.join(out_dir, "deltaT_scaling_plot.png"),
     )
