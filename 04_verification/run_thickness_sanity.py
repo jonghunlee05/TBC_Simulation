@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import yaml
 
 repo_root = Path(__file__).resolve().parents[1]
 sys.path.append(str(repo_root / "02_mesh"))
@@ -29,6 +30,15 @@ def main():
     ensure_dir(out_dir)
 
     tgo_values = [0.5, 1.0, 2.0, 4.0, 4.5, 5.0, 5.5, 6.0]
+    with open(geometry, "r", encoding="utf-8") as f:
+        base_geom = yaml.safe_load(f)
+    base_tgo = None
+    for layer in base_geom["layers"]:
+        if "tgo" in layer["name"].lower():
+            base_tgo = float(layer["thickness_um"])
+            break
+    if base_tgo is None:
+        raise ValueError("Base geometry does not define a TGO layer.")
 
     sigma_vals = []
     tau_vals = []
@@ -38,7 +48,9 @@ def main():
         geom_path = os.path.join(out_dir, f"geometry_tgo_{tgo_th:.2f}.yaml")
         update_tgo_thickness(geometry, geom_path, tgo_th)
         mesh_path = os.path.join(out_dir, f"tbc_2d_tgo_{tgo_th:.2f}.mesh")
-        build_mesh(geom_path, mesh_path, nx=200, dy_scale=1.0)
+        dy_scale = base_tgo / float(tgo_th)
+        dy_scale = float(np.clip(dy_scale, 0.5, 2.0))
+        build_mesh(geom_path, mesh_path, nx=200, dy_scale=dy_scale)
 
         max_sigma, max_tau, mean_sed = run_single_case(
             geom_path,

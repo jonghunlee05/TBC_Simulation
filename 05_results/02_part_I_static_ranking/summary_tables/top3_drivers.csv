@@ -1,0 +1,7 @@
+target,top1,top2,top3
+ysz_tgo_max_sigma_yy,delta_t,e_scale,ysz_thickness_um
+ysz_tgo_max_tau_xy,delta_t,e_scale,alpha_scale
+ysz_tgo_mean_sed,delta_t,e_scale,alpha_scale
+tgo_bc_max_sigma_yy,delta_t,e_scale,ysz_thickness_um
+tgo_bc_max_tau_xy,delta_t,ysz_thickness_um,e_scale
+tgo_bc_mean_sed,delta_t,e_scale,alpha_scale
